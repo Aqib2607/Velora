@@ -23,18 +23,18 @@ const VendorDashboard = () => {
     <div className="min-h-screen bg-background pt-20 pb-24 md:pb-8">
       <div className="container mx-auto px-4">
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
-          <div className="flex justify-between items-center mb-8">
+          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
             <div>
-              <h1 className="text-3xl font-bold">Vendor Dashboard</h1>
+              <h1 className="text-2xl md:text-3xl font-bold">Vendor Dashboard</h1>
               <p className="text-muted-foreground">Welcome back, Seller!</p>
             </div>
-            <div className="flex gap-2">
-              <Button variant="outline"><Settings className="h-4 w-4 mr-2" />Settings</Button>
-              <Button><Plus className="h-4 w-4 mr-2" />Add Product</Button>
+            <div className="flex gap-2 w-full md:w-auto">
+              <Button variant="outline" className="flex-1 md:flex-none"><Settings className="h-4 w-4 mr-2" />Settings</Button>
+              <Button className="flex-1 md:flex-none"><Plus className="h-4 w-4 mr-2" />Add Product</Button>
             </div>
           </div>
 
-          <div className="grid md:grid-cols-4 gap-4 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
             {stats.map((stat, i) => (
               <Card key={stat.title} className="glass-card">
                 <CardContent className="p-6">
@@ -52,7 +52,7 @@ const VendorDashboard = () => {
           </div>
 
           <Tabs defaultValue="orders" className="space-y-4">
-            <TabsList><TabsTrigger value="orders">Recent Orders</TabsTrigger><TabsTrigger value="products">Products</TabsTrigger><TabsTrigger value="analytics">Analytics</TabsTrigger></TabsList>
+            <TabsList className="w-full flex h-auto overflow-x-auto justify-start p-1 mb-4"><TabsTrigger value="orders">Recent Orders</TabsTrigger><TabsTrigger value="products">Products</TabsTrigger><TabsTrigger value="analytics">Analytics</TabsTrigger></TabsList>
             <TabsContent value="orders">
               <Card className="glass-card">
                 <CardHeader><CardTitle>Recent Orders</CardTitle></CardHeader>
