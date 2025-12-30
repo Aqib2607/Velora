@@ -7,7 +7,7 @@ const navItems = [
   { href: "/products", icon: Grid, label: "Products" },
   { href: "/vendor-dashboard", icon: Store, label: "Vendor" },
   { href: "/search", icon: Search, label: "Search" },
-  { href: "/#faq", icon: HelpCircle, label: "Help" },
+
   { href: "/checkout", icon: ShoppingCart, label: "Cart" },
   { href: "/login", icon: User, label: "Account" },
 ];

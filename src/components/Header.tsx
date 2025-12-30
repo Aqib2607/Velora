@@ -3,6 +3,7 @@ import { motion } from "framer-motion";
 import { ShoppingCart, User, Search, Menu } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useState } from "react";
 
 const navLinks = [
@@ -116,9 +117,33 @@ export function Header() {
             </Button>
           </Link>
 
-          <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-full">
-            <Menu className="h-5 w-5" />
-          </Button>
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="ghost" size="icon" className="md:hidden h-10 w-10 rounded-full">
+                <Menu className="h-5 w-5" />
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="right">
+              <SheetHeader>
+                <SheetTitle>Menu</SheetTitle>
+              </SheetHeader>
+              <div className="flex flex-col gap-4 mt-8">
+                {navLinks.map((link) => (
+                  <SheetClose asChild key={link.href}>
+                    <Link
+                      to={link.href}
+                      className={`text-lg font-medium transition-colors ${location.pathname === link.href
+                          ? "text-primary"
+                          : "text-muted-foreground hover:text-foreground"
+                        }`}
+                    >
+                      {link.label}
+                    </Link>
+                  </SheetClose>
+                ))}
+              </div>
+            </SheetContent>
+          </Sheet>
         </div>
       </div>
     </motion.header>

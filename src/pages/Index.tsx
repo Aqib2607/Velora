@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { HeroSection } from "@/components/HeroSection";
 import { ProductGrid } from "@/components/ProductGrid";
 import { DailyDeals } from "@/components/DailyDeals";
-import { FAQSection } from "@/components/FAQSection";
+
 import { Truck, Shield, CreditCard, Headphones } from "lucide-react";
 
 const features = [
@@ -65,7 +65,7 @@ const Index = () => {
 
       <ProductGrid />
 
-      <FAQSection />
+
 
       {/* CTA Section */}
       <section className="py-20 px-4">
