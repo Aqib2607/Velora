@@ -17,7 +17,7 @@ export function MobileNav() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-border/50">
-      <div className="flex items-center justify-around h-16 px-2">
+      <div className="flex items-center justify-between h-16 px-0 w-full">
         {navItems.map((item) => {
           const isActive = location.pathname === item.href;
           const Icon = item.icon;
@@ -26,7 +26,7 @@ export function MobileNav() {
             <Link
               key={item.href}
               to={item.href}
-              className="relative flex flex-col items-center justify-center w-16 h-full"
+              className="relative flex flex-col items-center justify-center flex-1 h-full min-w-0"
             >
               <motion.div
                 whileTap={{ scale: 0.9 }}
