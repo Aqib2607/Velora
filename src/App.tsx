@@ -53,7 +53,7 @@ function AppLayout({ children }: { children: React.ReactNode }) {
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="nextgen-theme" attribute="class" enableSystem>
+    <ThemeProvider defaultTheme="system" storageKey="velora-theme" attribute="class" enableSystem>
       <TooltipProvider>
         <Toaster />
         <Sonner />
