@@ -42,12 +42,7 @@ export function MobileNav() {
                   )}
                 </div>
                 <span className="text-[10px] font-medium">{item.label}</span>
-                {isActive && (
-                  <motion.div
-                    layoutId="activeMobileNav"
-                    className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 bg-primary rounded-full"
-                  />
-                )}
+
               </motion.div>
             </Link>
           );
