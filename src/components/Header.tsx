@@ -5,13 +5,13 @@ import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useState } from "react";
+import { useCart } from "@/contexts/CartContext";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-
   { href: "/vendor-dashboard", label: "Vendor" },
   { href: "/checkout", label: "Cart" },
 ];
@@ -19,6 +19,7 @@ const navLinks = [
 export function Header() {
   const location = useLocation();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const { cartCount } = useCart();
 
   return (
     <motion.header
@@ -105,9 +106,11 @@ export function Header() {
           <Link to="/checkout">
             <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">
               <ShoppingCart className="h-5 w-5" />
-              <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium">
-                3
-              </span>
+              {cartCount > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs rounded-full flex items-center justify-center font-medium">
+                  {cartCount}
+                </span>
+              )}
             </Button>
           </Link>
 
@@ -133,8 +136,8 @@ export function Header() {
                     <Link
                       to={link.href}
                       className={`text-lg font-medium transition-colors ${location.pathname === link.href
-                          ? "text-primary"
-                          : "text-muted-foreground hover:text-foreground"
+                        ? "text-primary"
+                        : "text-muted-foreground hover:text-foreground"
                         }`}
                     >
                       {link.label}

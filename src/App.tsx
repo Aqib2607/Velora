@@ -27,6 +27,7 @@ import About from "./pages/About";
 import Contact from "./pages/Contact";
 import VendorDashboard from "./pages/VendorDashboard";
 import ShippingPolicy from "./pages/ShippingPolicy";
+import { CartProvider } from "@/contexts/CartContext";
 
 const queryClient = new QueryClient();
 
@@ -55,33 +56,35 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider defaultTheme="system" storageKey="velora-theme" attribute="class" enableSystem>
       <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <AppLayout>
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/products" element={<Products />} />
-              <Route path="/product/:id" element={<ProductDetails />} />
-              <Route path="/checkout" element={<Checkout />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Login />} />
-              <Route path="/admin/security" element={<SecurityPanel />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/orders" element={<Orders />} />
-              <Route path="/wishlist" element={<Wishlist />} />
-              <Route path="/addresses" element={<Addresses />} />
-              <Route path="/categories" element={<Categories />} />
-              <Route path="/search" element={<SearchResults />} />
-              <Route path="/deals" element={<Deals />} />
-              <Route path="/about" element={<About />} />
-              <Route path="/contact" element={<Contact />} />
-              <Route path="/vendor-dashboard" element={<VendorDashboard />} />
-              <Route path="/shipping-policy" element={<ShippingPolicy />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </AppLayout>
-        </BrowserRouter>
+        <CartProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter>
+            <AppLayout>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/products" element={<Products />} />
+                <Route path="/product/:id" element={<ProductDetails />} />
+                <Route path="/checkout" element={<Checkout />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Login />} />
+                <Route path="/admin/security" element={<SecurityPanel />} />
+                <Route path="/profile" element={<Profile />} />
+                <Route path="/orders" element={<Orders />} />
+                <Route path="/wishlist" element={<Wishlist />} />
+                <Route path="/addresses" element={<Addresses />} />
+                <Route path="/categories" element={<Categories />} />
+                <Route path="/search" element={<SearchResults />} />
+                <Route path="/deals" element={<Deals />} />
+                <Route path="/about" element={<About />} />
+                <Route path="/contact" element={<Contact />} />
+                <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+                <Route path="/shipping-policy" element={<ShippingPolicy />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </AppLayout>
+          </BrowserRouter>
+        </CartProvider>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

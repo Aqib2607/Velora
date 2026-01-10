@@ -2,6 +2,7 @@ import { motion } from "framer-motion";
 import { Star, ShoppingCart, Heart } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { useCart } from "@/contexts/CartContext";
 
 interface ProductCardProps {
   id: number;
@@ -22,6 +23,8 @@ export function ProductCard({
   rating,
   reviews,
 }: ProductCardProps) {
+  const { addToCart } = useCart();
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -42,7 +45,7 @@ export function ProductCard({
               whileHover={{ scale: 1.1 }}
               transition={{ duration: 0.4 }}
             />
-            
+
             {/* Wishlist Button */}
             <motion.button
               initial={{ opacity: 0, scale: 0.8 }}
@@ -68,7 +71,7 @@ export function ProductCard({
                 className="w-full gradient-bg text-primary-foreground font-semibold"
                 onClick={(e) => {
                   e.preventDefault();
-                  // Add to cart logic
+                  addToCart({ id, name, price, image, rating, reviews });
                 }}
               >
                 <ShoppingCart className="h-4 w-4 mr-2" />
@@ -89,11 +92,10 @@ export function ProductCard({
                 {[...Array(5)].map((_, i) => (
                   <Star
                     key={i}
-                    className={`h-3.5 w-3.5 ${
-                      i < Math.floor(rating)
+                    className={`h-3.5 w-3.5 ${i < Math.floor(rating)
                         ? "text-yellow-500 fill-yellow-500"
                         : "text-muted-foreground"
-                    }`}
+                      }`}
                   />
                 ))}
               </div>

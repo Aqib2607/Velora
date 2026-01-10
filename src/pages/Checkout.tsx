@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  X, 
-  Minus, 
-  Plus, 
-  Trash2, 
-  CreditCard, 
+import {
+  X,
+  Minus,
+  Plus,
+  Trash2,
+  CreditCard,
   Smartphone,
   Truck,
   ShieldCheck,
@@ -13,25 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
-
-const cartItems = [
-  {
-    id: 1,
-    name: "Premium Wireless Headphones Pro Max",
-    price: 299.99,
-    quantity: 1,
-    color: "Midnight Black",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Smart Watch Ultra Series 9",
-    price: 449.00,
-    quantity: 2,
-    color: "Silver",
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop",
-  },
-];
+import { useCart } from "@/contexts/CartContext";
 
 const paymentMethods = [
   { id: "bkash", name: "bKash", icon: Smartphone, color: "#E2136E" },
@@ -41,25 +23,13 @@ const paymentMethods = [
 ];
 
 export default function Checkout() {
-  const [items, setItems] = useState(cartItems);
+  const { items, updateQuantity, removeFromCart, cartTotal } = useCart();
   const [selectedPayment, setSelectedPayment] = useState<string | null>(null);
   const [isCartOpen, setIsCartOpen] = useState(true);
 
-  const subtotal = items.reduce((acc, item) => acc + item.price * item.quantity, 0);
+  const subtotal = cartTotal;
   const shipping = subtotal > 100 ? 0 : 9.99;
   const total = subtotal + shipping;
-
-  const updateQuantity = (id: number, change: number) => {
-    setItems(items.map(item => 
-      item.id === id 
-        ? { ...item, quantity: Math.max(1, item.quantity + change) }
-        : item
-    ));
-  };
-
-  const removeItem = (id: number) => {
-    setItems(items.filter(item => item.id !== id));
-  };
 
   return (
     <div className="min-h-screen pb-20 md:pb-8">
@@ -100,58 +70,62 @@ export default function Checkout() {
                     exit={{ height: 0, opacity: 0 }}
                     className="space-y-4 overflow-hidden"
                   >
-                    {items.map((item) => (
-                      <motion.div
-                        key={item.id}
-                        layout
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, x: -100 }}
-                        className="flex gap-4 p-4 rounded-xl bg-secondary/30"
-                      >
-                        <img
-                          src={item.image}
-                          alt={item.name}
-                          className="w-24 h-24 rounded-lg object-cover"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold line-clamp-1">{item.name}</h3>
-                          <p className="text-sm text-muted-foreground">{item.color}</p>
-                          <p className="font-bold mt-1">${item.price.toFixed(2)}</p>
-                        </div>
-                        <div className="flex flex-col items-end justify-between">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => removeItem(item.id)}
-                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateQuantity(item.id, -1)}
-                              className="h-8 w-8 rounded-lg"
-                            >
-                              <Minus className="h-3 w-3" />
-                            </Button>
-                            <span className="w-8 text-center font-medium">
-                              {item.quantity}
-                            </span>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => updateQuantity(item.id, 1)}
-                              className="h-8 w-8 rounded-lg"
-                            >
-                              <Plus className="h-3 w-3" />
-                            </Button>
+                    {items.length === 0 ? (
+                      <p className="text-center text-muted-foreground py-8">Your cart is empty.</p>
+                    ) : (
+                      items.map((item) => (
+                        <motion.div
+                          key={item.id}
+                          layout
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, x: -100 }}
+                          className="flex gap-4 p-4 rounded-xl bg-secondary/30"
+                        >
+                          <img
+                            src={item.image}
+                            alt={item.name}
+                            className="w-24 h-24 rounded-lg object-cover"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <h3 className="font-semibold line-clamp-1">{item.name}</h3>
+                            <p className="text-sm text-muted-foreground">{item.color || "Default"}</p>
+                            <p className="font-bold mt-1">${item.price.toFixed(2)}</p>
                           </div>
-                        </div>
-                      </motion.div>
-                    ))}
+                          <div className="flex flex-col items-end justify-between">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => removeFromCart(item.id)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateQuantity(item.id, -1)}
+                                className="h-8 w-8 rounded-lg"
+                              >
+                                <Minus className="h-3 w-3" />
+                              </Button>
+                              <span className="w-8 text-center font-medium">
+                                {item.quantity}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => updateQuantity(item.id, 1)}
+                                className="h-8 w-8 rounded-lg"
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          </div>
+                        </motion.div>
+                      ))
+                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -172,14 +146,13 @@ export default function Checkout() {
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                     onClick={() => setSelectedPayment(method.id)}
-                    className={`relative p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${
-                      selectedPayment === method.id
+                    className={`relative p-4 rounded-xl border-2 transition-all flex items-center gap-4 ${selectedPayment === method.id
                         ? "border-primary bg-primary/5"
                         : "border-border hover:border-primary/50"
-                    }`}
+                      }`}
                     style={{
-                      boxShadow: selectedPayment === method.id 
-                        ? `0 0 20px ${method.color}40` 
+                      boxShadow: selectedPayment === method.id
+                        ? `0 0 20px ${method.color}40`
                         : undefined
                     }}
                   >
@@ -213,7 +186,7 @@ export default function Checkout() {
           >
             <div className="glass-card p-6 sticky top-24">
               <h2 className="text-xl font-semibold mb-6">Order Summary</h2>
-              
+
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Subtotal</span>
@@ -222,10 +195,12 @@ export default function Checkout() {
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Shipping</span>
                   <span className="font-medium">
-                    {shipping === 0 ? (
-                      <span className="text-green-500">FREE</span>
-                    ) : (
-                      `$${shipping.toFixed(2)}`
+                    {items.length === 0 ? "-" : (
+                      shipping === 0 ? (
+                        <span className="text-green-500">FREE</span>
+                      ) : (
+                        `$${shipping.toFixed(2)}`
+                      )
                     )}
                   </span>
                 </div>
@@ -233,9 +208,9 @@ export default function Checkout() {
                   <span className="text-muted-foreground">Tax</span>
                   <span className="font-medium">Calculated at checkout</span>
                 </div>
-                
+
                 <div className="h-px bg-border my-4" />
-                
+
                 <div className="flex justify-between text-lg">
                   <span className="font-semibold">Total</span>
                   <span className="font-bold">${total.toFixed(2)}</span>
@@ -244,7 +219,7 @@ export default function Checkout() {
 
               <Button
                 size="lg"
-                disabled={!selectedPayment}
+                disabled={items.length === 0 || !selectedPayment}
                 className="w-full h-14 mt-6 gradient-bg text-primary-foreground font-semibold text-lg rounded-xl glow"
               >
                 Place Order
