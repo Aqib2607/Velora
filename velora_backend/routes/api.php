@@ -39,6 +39,10 @@ Route::prefix('v1')->group(function () {
     // Public Verification Routes
     Route::get('/email/verify/{id}/{hash}', [\App\Http\Controllers\VerificationController::class, 'verify'])->name('verification.verify');
 
+    // Public Contact & Coupon Routes
+    Route::post('/contact', [\App\Http\Controllers\ContactController::class, 'store']);
+    Route::get('/coupons', [\App\Http\Controllers\CouponController::class, 'index']);
+
     // Protected Routes
     Route::middleware('auth:sanctum')->group(function () {
         Route::post('/email/resend', [\App\Http\Controllers\VerificationController::class, 'resend']);
@@ -118,6 +122,15 @@ Route::prefix('v1')->group(function () {
         // Notifications
         Route::get('/notifications', [\App\Http\Controllers\NotificationController::class, 'index']);
         Route::post('/notifications/read/{id?}', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+
+        // Manage Addresses
+        Route::apiResource('addresses', \App\Http\Controllers\AddressController::class);
+
+        // Manage Contact Messages (Admin)
+        Route::get('/contact/messages', [\App\Http\Controllers\ContactController::class, 'index']);
+
+        // Manage Coupons (Admin - excluding index which is public)
+        Route::apiResource('coupons', \App\Http\Controllers\CouponController::class)->except(['index']);
 
         // Broadcasting Auth (Manual override if default doesn't work or for custom path)
         Route::post('/broadcasting/auth', function (Illuminate\Http\Request $request) {
