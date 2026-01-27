@@ -34,14 +34,14 @@ export function MobileNav() {
                   }`}
               >
                 <div className="relative">
-                  <Icon className="h-5 w-5" />
+                  <Icon className="h-5 w-5" aria-hidden="true" />
                   {item.href === "/checkout" && (
                     <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-medium">
                       3
                     </span>
                   )}
                 </div>
-                <span className="text-[10px] font-medium">{item.label}</span>
+                <span className="text-[10px] font-medium" aria-hidden={!isActive ? "true" : "false"}>{item.label}</span>
 
               </motion.div>
             </Link>

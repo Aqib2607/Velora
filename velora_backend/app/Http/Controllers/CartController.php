@@ -30,14 +30,14 @@ class CartController extends BaseController
         foreach ($inputItems as $item) {
             $productId = $item['product_id'];
             $requestedQty = $item['quantity'];
-            
+
             if (! isset($products[$productId])) {
                 continue; // Product might have been deleted
             }
 
             $product = $products[$productId];
             // Fix: Access is_featured as boolean if needed, logic here focuses on stock
-            
+
             $stock = $product->stock_quantity;
             $adjustedQty = $requestedQty;
 
@@ -49,9 +49,9 @@ class CartController extends BaseController
 
             // If stock is 0, item is removed effectively (qty 0) or we can flag it
             if ($stock === 0) {
-                 $isValid = false;
-                 $messages[] = "'{$product->name}' is out of stock and removed from cart.";
-                 $adjustedQty = 0;
+                $isValid = false;
+                $messages[] = "'{$product->name}' is out of stock and removed from cart.";
+                $adjustedQty = 0;
             }
 
             if ($adjustedQty > 0) {

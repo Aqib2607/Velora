@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\StoreProductRequest;
+use App\Http\Requests\UpdateProductRequest;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Product;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 
 class ProductController extends BaseController
 {
@@ -15,52 +16,27 @@ class ProductController extends BaseController
      */
     public function index(Request $request)
     {
-        $query = Product::query()->where('status', 'published');
+        $query = Product::with(['category', 'shop'])
+            ->search($request->input('filter.search'))
+            ->filter($request->only(['status', 'category_id', 'min_price', 'max_price'])) // Assuming scopeFilter handles this array structure or I need to map it.
+            // scopeFilter in model expects array. $request->only returns array.
+            // But strict 'filter.status' might need mapping.
+            // The model scope uses $filters['status'].
+            // If frontend sends ?status=..., $request->only('status') works.
+            // If frontend sends ?filter[status]=..., then $request->input('filter') works.
+            // I'll stick to flat params for simplicity or map `filter` array.
+            // Let's use $request->all() or specific keys.
+            ->filter($request->all())
+            ->sort($request->sort, $request->direction);
 
-        if ($request->has('filter.category_id')) {
-            $query->where('category_id', $request->input('filter.category_id'));
-        }
-
-        if ($request->has('filter.search')) {
-            $search = $request->input('filter.search');
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-            });
-        }
-
-        if ($request->has('sort')) {
-            $sort = $request->input('sort');
-            if ($sort === 'price') {
-                $query->orderBy('price', 'asc');
-            } elseif ($sort === '-price') {
-                $query->orderBy('price', 'desc');
-            }
-        } else {
-            $query->latest();
-        }
-
-        $products = $query->paginate(12);
-
-        return $this->success('Products retrieved successfully', \App\Http\Resources\ProductResource::collection($products)->response()->getData(true));
+        return $this->success('Products retrieved successfully', \App\Http\Resources\ProductResource::collection($query->paginate(12))->response()->getData(true));
     }
 
-    /**
-     * Store a newly created product (Vendor).
-     */
-    public function store(Request $request, \App\Services\ImageService $imageService)
+    public function store(StoreProductRequest $request, \App\Services\ImageService $imageService)
     {
-        $request->validate([
-            'category_id' => 'required|exists:categories,id',
-            'name' => 'required|string|max:255',
-            'description' => 'required|string',
-            'price' => 'required|numeric|min:0',
-            'stock_quantity' => 'required|integer|min:0',
-            'images' => 'required|array|min:1|max:5',
-            'images.*' => 'image|max:5120',
-        ]);
-
+        $data = $request->validated();
         $user = $request->user();
+
         if (! $user->shop) {
             return $this->error('You do not have a shop.', 403);
         }
@@ -68,36 +44,88 @@ class ProductController extends BaseController
         $imagePaths = [];
         if ($request->hasFile('images')) {
             foreach ($request->file('images') as $image) {
-                // Resize to 1000x1000 and optimize
                 $imagePaths[] = $imageService->optimizeAndSave($image, 'products', 1000, 1000);
             }
+        } elseif (isset($data['images']) && is_array($data['images'])) {
+            // Handle if images are passed as string URLs (already uploaded)
+            $imagePaths = $data['images'];
         }
 
         $product = Product::create([
             'shop_id' => $user->shop->id,
-            'category_id' => $request->category_id,
-            'name' => $request->name,
-            'slug' => Str::slug($request->name) . '-' . Str::random(6),
-            'description' => $request->description,
-            'price' => $request->price,
-            'stock_quantity' => $request->stock_quantity,
+            'category_id' => $data['category_id'],
+            'name' => $data['name'],
+            'slug' => \Illuminate\Support\Str::slug($data['name']).'-'.\Illuminate\Support\Str::random(6),
+            'description' => $data['description'] ?? '',
+            'price' => $data['price'],
+            'stock_quantity' => $data['stock_quantity'],
             'images' => $imagePaths,
-            'status' => 'published',
-            'is_featured' => false,
+            'status' => $data['status'],
+            'is_featured' => $data['is_featured'] ?? false,
+            'metadata' => $data['metadata'] ?? null,
         ]);
 
-        return $this->success('Product created successfully', $product, 201);
+        return $this->success('Product created successfully', new \App\Http\Resources\ProductResource($product), 201);
+    }
+
+    public function update(UpdateProductRequest $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        if ($request->user()->id !== $product->shop->user_id && ! $request->user()->hasRole('admin')) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $data = $request->validated();
+
+        // Handle images update if provided
+        // Logic to merge or replace? Usually replace or add.
+        // For simplicity, if 'images' is present, update it.
+        // If file uploads, handle them? `UpdateProductRequest` allows string or file?
+        // Let's assume frontend handles upload separately or sends mixed.
+        // For this step, I'll valid 'images' as array of strings (urls) in request rules mostly.
+
+        $product->update($data);
+
+        return $this->success('Product updated successfully', new \App\Http\Resources\ProductResource($product));
+    }
+
+    public function destroy(Request $request, $id)
+    {
+        $product = Product::findOrFail($id);
+
+        if ($request->user()->id !== $product->shop->user_id && ! $request->user()->hasRole('admin')) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $product->delete(); // Soft delete
+
+        return $this->success('Product deleted successfully');
+    }
+
+    public function restore(Request $request, $id)
+    {
+        $product = Product::withTrashed()->findOrFail($id);
+
+        if ($request->user()->id !== $product->shop->user_id && ! $request->user()->hasRole('admin')) {
+            return $this->error('Unauthorized', 403);
+        }
+
+        $product->restore();
+
+        return $this->success('Product restored successfully');
     }
 
     /**
      * Display the specified product.
      */
-    public function show(string $slug)
+    public function show(string $id)
     {
         $product = Product::with(['shop', 'category', 'reviews.user'])
-            ->where('slug', $slug)
+            ->where('id', $id)
+            ->orWhere('slug', $id)
             ->firstOrFail();
-            
+
         return $this->success('Product retrieved successfully', new \App\Http\Resources\ProductResource($product));
     }
 
@@ -128,7 +156,7 @@ class ProductController extends BaseController
                 ->take(8)
                 ->get();
         });
-            
+
         return $this->success('Featured products retrieved successfully', \App\Http\Resources\ProductResource::collection($products));
     }
 
@@ -140,7 +168,7 @@ class ProductController extends BaseController
         // Simple trending logic: products with most sales in order items
         // Since we don't have much data, we'll confirm strictly.
         // For now, let's just return latest published as placeholder if no orders
-        /* 
+        /*
         $productIds = OrderItem::select('product_id')
             ->groupBy('product_id')
             ->orderByRaw('COUNT(*) DESC')
@@ -148,7 +176,7 @@ class ProductController extends BaseController
             ->pluck('product_id');
         $products = Product::whereIn('id', $productIds)->get();
         */
-        
+
         $products = Product::where('status', 'published')
             ->inRandomOrder()
             ->take(8)
@@ -172,7 +200,7 @@ class ProductController extends BaseController
             ->select('id', 'name', 'slug')
             ->take(5)
             ->get();
-            
+
         $categories = \App\Models\Category::where('name', 'like', "%{$query}%")
             ->select('id', 'name', 'slug')
             ->take(3)

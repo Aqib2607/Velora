@@ -4,12 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Product;
 use App\Models\Shop;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 
 class AnalyticsController extends BaseController
 {
@@ -20,7 +18,7 @@ class AnalyticsController extends BaseController
     {
         $user = $request->user();
         if (! $user->hasRole('shop_owner') || ! $user->shop) {
-             return $this->error('Unauthorized or Shop not found.', 403);
+            return $this->error('Unauthorized or Shop not found.', 403);
         }
 
         $shopId = $user->shop->id;
@@ -46,8 +44,8 @@ class AnalyticsController extends BaseController
 
         $chartData = [];
         for ($i = 0; $i < 7; $i++) {
-             $date = $startDate->copy()->addDays($i)->format('Y-m-d');
-             $chartData[$date] = $salesData[$date]->total ?? 0;
+            $date = $startDate->copy()->addDays($i)->format('Y-m-d');
+            $chartData[$date] = $salesData[$date]->total ?? 0;
         }
 
         return $this->success('Vendor stats retrieved successfully', [
@@ -64,7 +62,7 @@ class AnalyticsController extends BaseController
     public function adminStats(Request $request)
     {
         if (! $request->user()->hasRole('admin')) {
-             return $this->error('Unauthorized.', 403);
+            return $this->error('Unauthorized.', 403);
         }
 
         $totalUsers = User::count();

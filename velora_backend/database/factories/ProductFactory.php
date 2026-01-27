@@ -10,9 +10,10 @@ class ProductFactory extends Factory
     public function definition(): array
     {
         $name = ucfirst(fake()->words(3, true));
+
         return [
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . Str::random(5),
+            'slug' => Str::slug($name).'-'.Str::random(5),
             'description' => fake()->paragraph(),
             'price' => fake()->randomFloat(2, 10, 1000),
             'stock_quantity' => fake()->numberBetween(0, 100),

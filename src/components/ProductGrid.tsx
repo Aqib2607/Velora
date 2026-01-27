@@ -72,7 +72,16 @@ const products = [
   },
 ];
 
-export function ProductGrid() {
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface ProductGridProps {
+  products?: typeof products;
+  isLoading?: boolean;
+}
+
+export function ProductGrid({ products: propProducts, isLoading = false }: ProductGridProps) {
+  const displayProducts = propProducts || products;
+
   return (
     <section className="py-20 px-4">
       <div className="container mx-auto">
@@ -91,17 +100,29 @@ export function ProductGrid() {
         </motion.div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {products.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <ProductCard {...product} />
-            </motion.div>
-          ))}
+          {isLoading ? (
+            Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex flex-col space-y-3">
+                <Skeleton className="h-[300px] w-full rounded-xl" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[250px]" />
+                  <Skeleton className="h-4 w-[200px]" />
+                </div>
+              </div>
+            ))
+          ) : (
+            displayProducts.map((product, index) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: index * 0.1 }}
+              >
+                <ProductCard {...product} />
+              </motion.div>
+            ))
+          )}
         </div>
       </div>
     </section>

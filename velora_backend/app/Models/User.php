@@ -2,15 +2,16 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Laravel\Cashier\Billable;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
-    use HasFactory, Notifiable;
+    use Billable, HasFactory, \Laravel\Sanctum\HasApiTokens, Notifiable;
 
     /**
      * The attributes that are mass assignable.
@@ -25,6 +26,9 @@ class User extends Authenticatable
         'avatar_url',
         'is_active',
         'last_login_at',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
+        'two_factor_confirmed_at',
     ];
 
     /**
@@ -35,6 +39,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     /**
@@ -46,17 +52,20 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'two_factor_confirmed_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
             'last_login_at' => 'datetime',
         ];
     }
 
+    public function hasEnabledTwoFactorAuthentication(): bool
+    {
+        return ! is_null($this->two_factor_confirmed_at);
+    }
+
     /**
      * Check if the user has a specific role.
-     *
-     * @param string $role
-     * @return bool
      */
     public function hasRole(string $role): bool
     {
@@ -65,8 +74,6 @@ class User extends Authenticatable
 
     /**
      * Get the shop associated with the user.
-     *
-     * @return \Illuminate\Database\Eloquent\Relations\HasOne
      */
     public function shop(): \Illuminate\Database\Eloquent\Relations\HasOne
     {

@@ -1,426 +1,784 @@
-# PART I: PROJECT FOUNDATION (Prompts 1-8)
-
-## 1. Laravel Project Initialization
-Act as a Senior Backend Developer. Initialize a new Laravel 11 project named `velora_backend` configured for API-only development.
-
-- Provide the `composer create-project` command.
-- Show how to install `laravel/sanctum` for API authentication.
-- Show how to publish the `api.php` route file (since Laravel 11 requires opting in for API routing).
-- Configure `config/cors.php` to explicitly allow requests from my Vercel frontend domain (`https://velora-sigma.vercel.app`) to prevent CORS errors.
-- Provide the `.env.example` setup specifically for a MySQL connection.
-
-## 2. Database & Environment Configuration
-Set up the database environment for Velora.
-
-- Provide the MySQL connection variables for `.env` (`DB_CONNECTION=mysql`, `DB_HOST`, `DB_PORT`, `DB_DATABASE=velora_db`).
-- Create a custom `ApiResponse` trait. This trait should standardize all JSON responses sent to the frontend.
-    - Success Format: `{ "success": true, "message": "...", "data": ... }`
-    - Error Format: `{ "success": false, "message": "...", "errors": ... }`
-- Create a `BaseController` that uses this trait.
-
-## 3. User Schema & Migration (Multi-Role)
-Design the `users` table migration for a multi-vendor system.
-
-- Create a migration for users with:
-    - `id` (BigInt PK)
-    - `name`, `email` (unique), `password`
-    - `role` (ENUM: 'admin', 'shop_owner', 'customer') - Default 'customer'
-    - `avatar_url` (nullable)
-    - `is_active` (boolean, default true)
-    - `last_login_at` (timestamp)
-- Update the `User` model to include:
-    - `$fillable` fields.
-    - `$casts` for `password` (hashed) and boolean fields.
-    - A helper method `hasRole(string $role): bool`.
-
-## 4. Shops Table Migration (Vendor System)
-Create the database structure for vendors/shops.
-
-- Create a migration for shops:
-    - `id`, `user_id` (FK to users, onDelete cascade)
-    - `name` (string, unique), `slug` (string, unique)
-    - `description` (text)
-    - `logo_url`, `banner_url` (nullable)
-    - `status` (ENUM: 'pending', 'active', 'suspended')
-    - `is_verified` (boolean)
-- Define the OneToOne relationship in the `User` model (`shop()`) and the BelongsTo relationship in the `Shop` model (`owner()`).
-
-## 5. Products Schema Design
-Design the `products` table migration.
-
-- Fields:
-    - `id`, `shop_id` (FK to shops)
-    - `name`, `slug`, `description` (longText)
-    - `price` (decimal 10,2), `stock_quantity` (integer)
-    - `category_id` (FK to categories)
-    - `images` (JSON column to store array of image paths)
-    - `status` (ENUM: 'draft', 'published', 'archived')
-- Create a migration for `categories` table (`id`, `name`, `slug`, `parent_id` for nesting).
-
-## 6. Orders & Order Items Schema
-Design the core e-commerce transaction tables.
-
-- `orders` table:
-    - `id`, `user_id` (FK)
-    - `total_amount` (decimal), `subtotal`, `tax`
-    - `status` (ENUM: 'pending', 'processing', 'shipped', 'delivered', 'cancelled')
-    - `payment_status` (ENUM: 'unpaid', 'paid', 'refunded')
-    - `payment_method` (string)
-    - `shipping_address` (JSON)
-- `order_items` table:
-    - `id`, `order_id` (FK)
-    - `product_id` (FK)
-    - `shop_id` (FK) - crucial for multi-vendor payout calculation
-    - `quantity`, `unit_price`, `total`
-
-## 7. Exception Handling & JSON Responses
-Configure global exception handling in `bootstrap/app.php` (for Laravel 11).
-
-- Ensure that `ModelNotFoundException` returns a generic 404 JSON response using our `ApiResponse` format instead of the default HTML error page.
-- Ensure validation errors (`ValidationException`) return a 422 JSON response with field-specific error messages formatted for the React frontend to consume easily.
-
-## 8. API Testing Setup
-Set up the testing environment.
-
-- Configure `phpunit.xml` to use an in-memory SQLite database or a separate testing MySQL database.
-- Create a basic test `tests/Feature/HealthCheckTest.php` to verify the `/api/health` endpoint returns 200 OK and the DB connection is successful.
-
-# PART II: AUTHENTICATION & USERS (Prompts 9-15)
-
-## 9. Registration Logic (Sanctum)
-Implement the Registration API.
-
-- Create `AuthController` and a Form Request `RegisterRequest`.
-- Validate: Name, Email (unique), Password (confirmed, min 8).
-- Logic:
-    - Create User.
-    - Hash password automatically.
-    - Assign default role 'customer'.
-    - Generate Sanctum token: `$user->createToken('auth_token')->plainTextToken`.
-    - Return User Data + Token.
-
-## 10. Login Logic
-Implement the Login API.
-
-- Create `LoginRequest` (email, password).
-- Logic:
-    - Check if user exists and `Hash::check` password.
-    - Security Check: Ensure `$user->is_active` is true.
-    - Update `last_login_at`.
-    - Generate Token.
-- Endpoint: `POST /api/login`.
-- Output JSON: `{ token: "...", user: { ... } }`.
-
-## 11. User Profile & Avatar
-Implement User Profile Management.
-
-- Endpoint: `GET /api/me` (Protected route). Return the authenticated user.
-- Endpoint: `POST /api/profile/update`. Allow updating name, bio, phone.
-- Endpoint: `POST /api/profile/avatar`.
-    - Use Laravel Storage to save the file to `public/avatars`.
-    - Update the database column.
-    - Return the full public URL (`asset('storage/...')`).
-
-## 12. Middleware for Roles
-Implement Role-Based Access Control (RBAC).
-
-- Create a middleware alias `role` in `bootstrap/app.php`.
-- The middleware should accept parameters like `role:admin,shop_owner`.
-- If the user's role is not in the allowed list, abort with 403 Forbidden JSON.
-- Apply this to a test route to verify.
-
-## 13. Vendor Registration Flow
-Create a specific flow for users to become vendors.
-
-- Endpoint: `POST /api/shops/register`.
-- Logic:
-    - User must be authenticated.
-    - Validate shop name, description.
-    - Create `Shop` record linked to user.
-    - Crucial: Update user role from 'customer' to 'shop_owner'.
-    - Return the created shop details.
+# PART I: PROJECT FOUNDATION
 
-## 14. Password Reset Flow
-Implement Forgot Password functionality.
+## Step 1: Project Bootstrap & Structure
 
-- `POST /api/forgot-password`: Validate email, generate token (using `DB::table('password_reset_tokens')`), send email (use Mailable).
-- `POST /api/reset-password`: Validate token, email, and new password. Update password, delete token.
-- Use Laravel's built-in Password broker if possible, but ensure the response is JSON, not a redirect.
+Initialize a full-stack project for [Project Name].
 
-## 15. Logout & Token Revocation
-Implement secure logout.
+Backend (Laravel):
+- Run: `composer create-project laravel/laravel backend`
+- Setup API scaffolding: `php artisan install:api`
+- Install dependencies: `laravel/sanctum` (Auth), `laravel/pint` (Linting).
+- Structure: Standard Laravel (app/Models, app/Http/Controllers, routes/api.php).
+- Create README.md with setup instructions.
 
-- Endpoint: `POST /api/logout`.
-- Logic: `$request->user()->currentAccessToken()->delete();`.
-- Return success message.
-
-# PART III: CORE E-COMMERCE FEATURES (Prompts 16-25)
-
-## 16. Category Management (Admin)
-Implement Category CRUD.
-
-- `CategoryController` (Admin only for Create/Update/Delete).
-- Public Endpoint: `GET /api/categories` (Tree structure for nested categories).
-- Use a recursive relationship in the model (`children()`) to load subcategories eagerly.
-
-## 17. Product Creation (Vendor)
-Implement Product Creation logic.
-
-- Endpoint: `POST /api/products`.
-- Middleware: `auth:sanctum` and `role:shop_owner`.
-- Validation: Ensure the logged-in user actually owns a shop.
-- Handle Image Uploads: Allow up to 5 images. Store them, get paths, save as JSON array.
-- Auto-generate slug from name.
-
-## 18. Product Read APIs (Public)
-Implement robust Product listing for the homepage.
-
-- Endpoint: `GET /api/products`.
-- Use Laravel Spatie Query Builder or custom logic to support:
-    - `?filter[category_id]=...`
-    - `?sort=price` or `?sort=-price`
-    - `?filter[search]=...` (partial match on name/description)
-- Pagination: Return `paginate(12)` meta data (total, per_page, current_page) for the frontend infinite scroll.
-
-## 19. Single Product Details
-Implement Single Product View.
-
-- Endpoint: `GET /api/products/{slug}`.
-- Eager load relationships: shop, category, reviews.
-- Create a `ProductResource` (API Resource) to format the output.
-- Include a computed field `image_urls` that transforms stored paths into full URLs.
-- Include `shop_name` and `shop_avatar` from the relationship.
-
-## 20. Wishlist Functionality
-Implement Wishlist.
-
-- Create `wishlists` table (id, user_id, product_id). Unique constraint on user+product.
-- Endpoints:
-    - `GET /api/wishlist` (List products).
-    - `POST /api/wishlist/toggle` (Add if not exists, remove if exists).
-- Return boolean `in_wishlist` in the `ProductResource` if the user is logged in.
-
-## 21. Shop Profile (Public View)
-Create public shop pages.
-
-- Endpoint: `GET /api/shops/{slug}`.
-- Return shop details (logo, banner, description) and a paginated list of their products.
-- Include aggregate stats: `total_products`, `average_rating`.
-
-## 22. Product Reviews
-Implement Rating and Review system.
-
-- Table `reviews`: `id`, `user_id`, `product_id`, `rating` (1-5), `comment`.
-- Endpoint: `POST /api/products/{id}/reviews`.
-- Validation: User must have purchased the product (check `orders` table) before reviewing.
-
-## 23. Related Products Logic
-Implement a recommendation engine endpoint.
-
-- Endpoint: `GET /api/products/{id}/related`.
-- Logic: Fetch 4 products from the same `category_id` excluding the current ID.
-
-## 24. Featured & Trending
-Create homepage widget endpoints.
+Frontend (React):
+- Run: `npm create vite@latest frontend -- --template react-ts`
+- Install: Tailwind CSS, Axios, React Router DOM.
+- Structure: src/ (components, pages, hooks, services, contexts).
 
-- `GET /api/products/featured`: Products marked `is_featured` in DB.
-- `GET /api/products/trending`: Products with highest sales count in the last 30 days (requires query on `order_items`).
+Include:
+- .gitignore for both.
+- Basic health check endpoint: `GET /api/health` returning JSON.
 
-## 25. Search Suggestions
-Implement autocomplete API.
+## Step 2: Environment Configuration
 
-- Endpoint: `GET /api/search/suggestions?q=...`.
-- Return 5 product names and 3 category names matching the query.
-- Optimize for speed (select only `id`, `name`, `slug`).
+Set up environment configuration.
 
-# PART IV: CART, ORDERS & PAYMENTS (Prompts 26-35)
+Backend (.env):
+- APP_URL, FRONTEND_URL (for CORS/Sanctum).
+- DB_CONNECTION=mysql (STRICTLY MYSQL ONLY - DO NOT USE SQLITE)
+- DB_HOST, DB_PORT, DB_DATABASE, DB_USERNAME, DB_PASSWORD.
 
-## 26. Cart Synchronization
-Implement server-side cart validation.
+Frontend (.env):
+- VITE_API_URL (e.g., http://localhost:8000/api/v1).
+- VITE_APP_NAME.
 
-- Frontend uses localStorage. Create `POST /api/cart/sync`.
-- Input: Array of `{ product_id, quantity }`.
-- Logic:
-    - Fetch fresh prices/stock from DB.
-    - Check if requested quantity > stock.
-    - Calculate totals securely.
-- Return: `{ items: [...], subtotal: ..., valid: boolean, messages: [] }`.
+Action:
+- Create `.env.example` files.
+- Configure `config/cors.php` to allow requests from VITE_API_URL.
 
-## 27. Checkout Initiation
-Prepare the order for payment.
+## Step 3: Database Connection & Setup
 
-- Endpoint: `POST /api/checkout/init`.
-- Input: Cart items, Address ID.
-- Logic:
-    - Validate stock one last time.
-    - Create a temporary Order with status `pending_payment`.
-- Return `order_id` and total amount.
+Set up MySQL connection.
 
-## 28. Payment Gateway (Stripe/SSLCommerz)
-Implement payment processing.
+Laravel:
+- Configure `.env` with MySQL credentials.
+- Verify connection with `php artisan migrate:status`.
+- Update `GET /api/health` to include a DB connection check using `DB::connection()->getPdo()`.
+- Implement graceful error handling if DB is down.
 
-- Service Class: `PaymentService`.
-- Method: `createPaymentIntent($order)`.
-- If using Stripe: Return `client_secret` to frontend.
-- If using SSLCommerz (BD): Return the redirect Gateway URL.
+## Step 4: Base API Architecture
 
-## 29. Order Finalization (Webhook/Callback)
-Handle successful payment.
+Implement RESTful API architecture.
 
-- Endpoint: `POST /api/payment/success` or Webhook.
-- Logic (Inside `DB::transaction`):
-    - Update Order status to `processing`.
-    - Update Payment status to `paid`.
-    - Critical: Loop through items and decrement `product.stock_quantity`.
-    - Send Order Confirmation Email (Queue).
+Structure:
+- Routes in `routes/api.php` prefixed with `/v1`.
+- Use **API Resources** (`php artisan make:resource`) for consistent JSON responses.
+- Create a `BaseController` or Trait for standardized responses: `{ success: boolean, data: any, message: string }`.
 
-## 30. User Order History
-Customer Dashboard - Orders.
+## Step 5: User Schema Design
 
-- Endpoint: `GET /api/orders`.
-- Return paginated orders sorted by date desc.
-- Endpoint: `GET /api/orders/{id}`. Show full details including items and shipping status.
-- Ensure user can only see their own orders.
+Design User schema.
 
-## 31. Vendor Order Management
-Shop Owner Dashboard - Orders.
+Migration (users table):
+- `id`, `name`, `email` (unique, indexed), `password`.
+- `role` (enum: user, admin).
+- `is_active` (boolean).
+- `email_verified_at`, `created_at`, `updated_at`.
 
-- Endpoint: `GET /api/vendor/orders`.
-- Logic: Since an order might contain items from multiple shops, query `OrderItem` where `shop_id` matches the vendor.
-- Return list of items to be fulfilled by this specific vendor.
+Model:
+- Update `User.php`: Add `$fillable`, `$hidden` (password, remember_token), and `$casts` (password => hashed).
 
-## 32. Order Status Updates
-Manage Order Lifecycle.
+## Step 6: Authentication System - Backend
 
-- Endpoint: `PATCH /api/orders/{id}/status`.
-- Role: Admin or Shop Owner (for their specific items).
-- Update status (e.g., 'shipped'). Trigger notification to user.
+Implement Sanctum Authentication.
 
-## 33. Sales Analytics (Vendor)
-Create a stats endpoint for the Vendor Dashboard.
+Setup:
+- Configure `config/sanctum.php`.
+- Ensure `User` model uses `HasApiTokens`.
 
-- `GET /api/vendor/stats`.
-- Return:
-    - Total Earnings (Sum of order_items total).
-    - Total Orders.
-    - Products Sold.
-    - Chart Data: Sales per day for the last 7 days.
+Endpoints:
+- `POST /auth/register`: Validate, Create User, Return Token.
+- `POST /auth/login`: Validate, `Auth::attempt`, Generate Token (`createToken`), Return Token.
+- `POST /auth/logout`: `auth()->user()->currentAccessToken()->delete()`.
 
-## 34. Admin Dashboard Stats
-Global Analytics.
+## Step 7: Password Security & Hashing
 
-- `GET /api/admin/stats`.
-- Total Users, Total Active Shops, Total Revenue (Platform wide).
+Implement password security.
 
-## 35. Invoice Generation
-PDF Invoice generation.
+Laravel:
+- Use `Hash::make()` for storage.
+- Use `Password::min(8)->mixedCase()->numbers()->symbols()` validation rule.
+- Ensure passwords are never returned in API responses (add to `$hidden` array in Model).
 
-- Install `barryvdh/laravel-dompdf`.
-- Endpoint: `GET /api/orders/{id}/invoice`.
-- Generate PDF stream using a Blade view template.
+## Step 8: Auth Middleware & Route Protection
 
-# PART V: POLISH & OPTIMIZATION (Prompts 36-42)
+Configure Middleware.
 
-## 36. API Resources (Transformers)
-Standardize all outputs.
+Actions:
+- Protect routes using `middleware('auth:sanctum')`.
+- Create custom middleware `EnsureUserHasRole` for RBAC.
+- Apply middleware to `/api/v1/user` and other protected groups.
 
-- Create `UserResource`, `ProductResource`, `OrderResource`.
-- Ensure no raw DB columns (like `created_at`) are exposed unless formatted (d M Y).
-- Ensure sensitive fields like `cost_price` are hidden from public resources and only shown in `VendorProductResource`.
+## Step 9: Global Error Handling
 
-## 37. Caching
-Implement caching for high-traffic read endpoints.
+Implement centralized error handling.
 
-- Cache the Homepage Products (`/api/products/featured`) for 30 minutes using `Cache::remember`.
-- Cache Categories tree for 24 hours.
-- Implement Cache Busting: When a product is updated, clear the relevant cache keys.
+Laravel:
+- Customize `bootstrap/app.php` (Laravel 11) or `Handler.php`.
+- Catch `ModelNotFoundException` -> 404 JSON.
+- Catch `ValidationException` -> 422 JSON.
+- Ensure fallback returns JSON, not HTML, for API routes.
 
-## 38. Rate Limiting
-Protect the API.
+## Step 10: API Testing & Documentation
 
-- Configure `RateLimiter` in `AppServiceProvider`.
-- Apply `throttle:60,1` (60 req/min) to general API routes.
-- Apply strict `throttle:5,1` to Auth routes (Login/Register) to prevent brute force.
+Set up testing and docs.
 
-## 39. Image Optimization (Server Side)
-Optimize images on upload.
+Tools:
+- Install `dedoc/scramble` for auto-generated OpenAPI docs.
+- Create a Postman Collection for Auth endpoints.
+- Verify `POST /register` and `POST /login` work correctly.
 
-- Install `intervention/image`.
-- Middleware/Service: When an image is uploaded, resize it to max 1000x1000px and convert to WebP with 80% quality before saving to storage.
-- Generate a thumbnail (200x200) for grid views.
+# PART II: USER MANAGEMENT
 
-## 40. Security Headers & CORS
-Final Security Check.
+## Step 11: User Registration Flow
 
-- Ensure Sanctum stateful domains are configured if using cookies.
-- Set `X-Content-Type-Options`, `X-Frame-Options`, and `X-XSS-Protection` headers.
-- Force HTTPS in `AppServiceProvider` if `app()->isProduction()`.
+Complete registration flow.
 
-## 41. Queue System
-Offload heavy tasks.
+Backend:
+- Implement `MustVerifyEmail` on User model.
+- Dispatch `Registered` event upon sign up.
 
-- Set up database queue driver (`QUEUE_CONNECTION=database`).
-- Create Jobs: `SendWelcomeEmail`, `ProcessOrderEmails`.
-- Show how to run the queue worker: `php artisan queue:work`.
+Frontend:
+- Create Signup Form (React Hook Form + Zod).
+- Connect to `/auth/register`.
+- Handle validation errors from Laravel (422 response).
 
-## 42. Search Indexing (Scout - Optional)
-Prepare for better search.
+## Step 12: Login System & Frontend
 
-- Install `laravel/scout`.
-- Configure the database driver (for simple text search) or `algolia/meilisearch` driver.
-- Add `Searchable` trait to `Product` model.
+Implement Login UI.
 
-# PART VI: DEPLOYMENT (Prompts 43-50)
+Frontend:
+- Login Form.
+- On success, store token in `localStorage` (or cookie).
+- Redirect to Dashboard.
+- Setup Axios Interceptor to attach `Authorization: Bearer <token>` to requests.
 
-## 43. Deployment Preparation
-Prepare the app for production.
+## Step 13: Password Reset Flow
 
-- Command to optimize: `php artisan config:cache`, `php artisan route:cache`, `php artisan view:cache`.
-- Ensure `.env.production` has `APP_DEBUG=false`.
+Implement Password Reset.
 
-## 44. Linux Server Setup (Ubuntu)
-Instructions for VPS setup.
+Backend:
+- Use Laravel's built-in Password Broker.
+- `POST /forgot-password` -> `Password::sendResetLink`.
+- `POST /reset-password` -> `Password::reset`.
 
-- Install dependencies: `apt install nginx mysql-server php8.2-fpm php8.2-mysql composer unzip`.
-- Secure MySQL installation.
+Frontend:
+- Request Link Page.
+- Reset Page (captures token from URL).
 
-## 45. Nginx Configuration
-Configure the Web Server.
+## Step 14: User Profile Management
 
-- Provide the nginx server block configuration file for a Laravel API.
-- Ensure it points to `/var/www/velora-api/public`.
-- Configure gzip compression.
+Build Profile Management.
 
-## 46. SSL Certificate (Certbot)
-Secure the API.
+Backend:
+- `GET /user`: Return current user resource.
+- `PUT /user/profile`: Update name, bio, etc.
+- `POST /user/avatar`: Handle file upload to `public` disk.
 
-- Install Certbot: `apt install certbot python3-certbot-nginx`.
-- Command to generate SSL: `certbot --nginx -d api.velora.com`.
+Frontend:
+- Profile Page with Edit Mode.
 
-## 47. Database Migration on Prod
-Database rollout.
+## Step 15: Role-Based Access Control (RBAC)
 
-- Clone repo.
-- `composer install --no-dev`.
-- `php artisan migrate --force`.
-- `php artisan storage:link`.
+Implement RBAC.
 
-## 48. Folder Permissions
-Fix Linux permissions.
+Backend:
+- Create `UserPolicy`.
+- Add `role` check in Policies or Middleware.
+- Admin Routes: `GET /admin/users`.
 
-- `chown -R www-data:www-data /var/www/velora-api`.
-- `chmod -R 775 storage bootstrap/cache`.
+Frontend:
+- Create `RequireAuth` and `RequireRole` wrapper components for routes.
 
-## 49. Supervisor (Queue Worker)
-Keep the queue running.
+## Step 16: User Dashboard
 
-- Install supervisor.
-- Create configuration file `/etc/supervisor/conf.d/velora-worker.conf`.
-- Command: `php artisan queue:work --tries=3`.
+Create Dashboard.
 
-## 50. Final Smoke Test
-Verification.
+Backend:
+- `GET /dashboard/stats`: Return counts (e.g., orders, items).
 
-- Endpoint: `GET https://api.velora.com/api/health`.
-- Check if React frontend can login.
-- Check if images load correctly.
+Frontend:
+- Dashboard Layout (Sidebar + Header).
+- Display stats cards.
+- Handle loading states.
+
+## Step 17: Account Settings Page
+
+Build Settings Page.
+
+Backend:
+- `PUT /user/password`: Verify old password, update new.
+- `DELETE /user`: Soft delete account.
+
+Frontend:
+- Tabbed Settings UI (General, Security, Danger Zone).
+
+## Step 18: Email Verification System
+
+Enforce Email Verification.
+
+Backend:
+- Add `verified` middleware to critical routes.
+- `POST /email/verification-notification`: Resend link.
+
+Frontend:
+- Check `user.email_verified_at`.
+- Show global banner if unverified.
+
+## Step 19: Two-Factor Authentication (2FA)
+
+Implement 2FA (Optional).
+
+Backend:
+- Use `pragmarx/google2fa-laravel`.
+- Endpoints to generate QR code and verify OTP.
+
+Frontend:
+- 2FA Setup Screen (Scan QR).
+- OTP Input Screen during login.
+
+## Step 20: Session Management
+
+Manage Sessions.
+
+Backend:
+- `GET /sessions`: List active tokens.
+- `DELETE /sessions`: Revoke other tokens.
+
+Frontend:
+- Display active sessions list.
+- "Log out other devices" button.
+
+# PART III: CORE APPLICATION FEATURES
+
+## Step 21: Core App Data Schema
+
+Design Core Schema (e.g., Products/Posts).
+
+Migration:
+- `user_id` (FK), `title`, `slug`, `content`, `status`, `metadata` (JSON).
+- Soft deletes and Timestamps.
+
+Model:
+- Define Relationships (`belongsTo User`).
+
+## Step 22: Create Operation (C in CRUD)
+
+Implement Create.
+
+Backend:
+- Create `StoreEntityRequest` (Form Request validation).
+- `POST /entities`: Store logic.
+
+Frontend:
+- Create Form with validation feedback.
+- Use `react-query` mutations.
+
+## Step 23: Read Operations (R in CRUD)
+
+Implement Read.
+
+Backend:
+- `GET /entities`: Paginated list (`paginate(20)`).
+- `GET /entities/{id}`: Single item resource.
+
+Frontend:
+- List Component.
+- Detail View Component.
+
+## Step 24: Update Operation (U in CRUD)
+
+Implement Update.
+
+Backend:
+- `PUT /entities/{id}`.
+- Create `UpdateEntityRequest`.
+- Policy: `authorize('update', $entity)`.
+
+Frontend:
+- Edit Form (pre-filled data).
+- Optimistic UI update.
+
+## Step 25: Delete Operation (D in CRUD)
+
+Implement Delete.
+
+Backend:
+- `DELETE /entities/{id}`.
+- Soft delete logic.
+
+Frontend:
+- Confirmation Modal.
+- Remove from list on success.
+
+## Step 26: Pagination Implementation
+
+Implement Pagination.
+
+Backend:
+- Return standard Laravel pagination meta (current_page, last_page).
+
+Frontend:
+- Pagination Component (Prev, Next, Page Numbers).
+- Sync with URL params (`?page=2`).
+
+## Step 27: Search Functionality
+
+Implement Search.
+
+Backend:
+- `GET /entities?search=xyz`.
+- Use local scope: `scopeSearch($query, $term)`.
+
+Frontend:
+- Search Bar with debounce.
+
+## Step 28: Filtering System
+
+Implement Filtering.
+
+Backend:
+- Use `spatie/laravel-query-builder` or manual `when()` clauses for status/category.
+
+Frontend:
+- Filter Sidebar/Dropdowns.
+- URL serialization.
+
+## Step 29: Sorting Mechanism
+
+Implement Sorting.
+
+Backend:
+- `?sort=created_at&direction=desc`.
+- Whitelist sortable columns.
+
+Frontend:
+- Sortable Table Headers.
+
+## Step 30: Data Validation
+
+Refine Validation.
+
+Backend:
+- Use strict Form Requests.
+- Custom Validation Rules.
+
+Frontend:
+- Match backend rules with client-side validation schema (Zod).
+
+# PART IV: ADVANCED FEATURES
+
+## Step 31: File Upload System
+
+Implement File Uploads.
+
+Backend:
+- `POST /upload`.
+- Use `Storage` facade (S3 or Local).
+- Return public URL.
+
+Frontend:
+- Dropzone component.
+- Upload progress bar.
+
+## Step 32: Image Processing
+
+Implement Image Optimization.
+
+Backend:
+- Use `intervention/image` or `spatie/laravel-medialibrary`.
+- Generate thumbnails on upload.
+
+Frontend:
+- Display thumbnails in lists, full size in details.
+
+## Step 33: Real-Time Notifications
+
+Implement Notifications.
+
+Backend:
+- Use Laravel Database Notifications.
+- Endpoint: `GET /notifications`.
+
+Frontend:
+- Notification Bell.
+- Mark as read functionality.
+
+## Step 34: WebSocket for Real-Time Updates
+
+Implement WebSockets.
+
+Backend:
+- Install Laravel Reverb or configure Pusher.
+- Broadcast events (`ShouldBroadcast`).
+
+Frontend:
+- Laravel Echo + Pusher JS.
+- Listen for real-time updates.
+
+## Step 35: Email Service Integration
+
+Configure Emails.
+
+Backend:
+- Create Mailables (`php artisan make:mail`).
+- Use Blade templates.
+- Configure SMTP/Mailtrap.
+- Queue email sending.
+
+## Step 36: Third-Party API Integration
+
+Integrate External APIs.
+
+Backend:
+- Use `Http` Client.
+- Create dedicated Services (e.g., WeatherService).
+- Cache responses.
+
+## Step 37: Payment Integration (Stripe)
+
+Implement Payments.
+
+Backend:
+- Install Laravel Cashier.
+- Setup Billable trait.
+- Create Checkout Session.
+
+Frontend:
+- React Stripe.js.
+- Handle success/cancel redirects.
+
+## Step 38: Background Jobs (Queues)
+
+Configure Queues.
+
+Backend:
+- `php artisan make:job`.
+- Use `database` or `redis` driver.
+- Dispatch long-running tasks.
+
+## Step 39: Analytics & Tracking
+
+Implement Analytics.
+
+Backend:
+- Middleware to log API usage.
+- Or `spatie/laravel-activitylog` for model audit trails.
+
+Frontend:
+- Track custom events.
+
+## Step 40: Export & Reporting
+
+Implement Data Export.
+
+Backend:
+- Use `maatwebsite/excel`.
+- Endpoint to download CSV/XLSX.
+
+Frontend:
+- Export Button.
+
+# PART V: POLISH & OPTIMIZATION
+
+## Step 41: Frontend Component Library
+
+Setup Component Library.
+
+Frontend:
+- Install shadcn/ui or Create custom reusable components (Button, Input, Card).
+- Ensure consistency.
+
+## Step 42: Loading & Skeleton States
+
+Implement Skeletons.
+
+Frontend:
+- Create Skeleton loaders.
+- Show while fetching data.
+- Disable buttons during submission.
+
+## Step 43: Empty States & Fallbacks
+
+Design Empty States.
+
+Frontend:
+- "No items found" components with illustrations and actions.
+
+## Step 44: Error Handling & User Feedback
+
+Enhance Feedback.
+
+Frontend:
+- Use Toasts (Sonner/Hot Toast) for success/error.
+- Field-level validation messages.
+
+## Step 45: Responsive Design & Mobile
+
+Mobile Optimization.
+
+Frontend:
+- Check layouts on mobile breakpoints.
+- Implement Hamburger menu.
+
+## Step 46: Dark Mode Implementation
+
+Implement Dark Mode.
+
+Frontend:
+- Tailwind `dark` class strategy.
+- Theme toggle context.
+
+## Step 47: Performance Optimization
+
+Optimize Performance.
+
+Backend:
+- Eager load relationships (`with()`).
+- Index DB columns.
+
+Frontend:
+- React.lazy for route splitting.
+
+## Step 48: SEO & Meta Tags
+
+Implement SEO.
+
+Frontend:
+- Use `react-helmet-async`.
+- Dynamic titles and meta descriptions.
+
+## Step 49: Security Hardening
+
+Harden Security.
+
+Backend:
+- Secure Headers.
+- Rate Limiting.
+- Sanitize Inputs.
+
+## Step 50: Testing Setup
+
+Configure Testing.
+
+Backend:
+- Setup Pest PHP.
+- Configure `phpunit.xml` to use MySQL (e.g., `DB_CONNECTION=mysql`). Do not use SQLite memory database.
+Frontend:
+- Setup Vitest.
+
+# PART VI: DEPLOYMENT & PRODUCTION
+
+## Step 51: Environment Separation
+
+Separate Environments.
+
+Action:
+- Define Production vs Local variables.
+- Disable Debug mode in Prod.
+
+## Step 52: Docker Setup
+
+Dockerize.
+
+Action:
+- Create Dockerfile for Laravel (Nginx/PHP-FPM).
+- Create Dockerfile for React.
+
+## Step 53: Backend Deployment
+
+Deploy Backend.
+
+Action:
+- Deploy to VPS/Cloud (Forge/Vapor).
+- Configure Nginx.
+
+## Step 54: Frontend Deployment
+
+Deploy Frontend.
+
+Action:
+- Deploy to Vercel/Netlify.
+- Connect env variables.
+
+## Step 55: Database Migration
+
+Prod Database.
+
+Action:
+- Run migrations on production.
+- Seed essential data.
+
+## Step 56: CI/CD Pipeline
+
+Setup CI/CD.
+
+Action:
+- GitHub Actions workflow for Tests and Deployment.
+
+## Step 57: Monitoring & Logging
+
+Setup Monitoring.
+
+Action:
+- Integrate Sentry.
+- Configure log channels.
+
+## Step 58: Backup Strategy
+
+Configure Backups.
+
+Action:
+- Schedule `spatie/laravel-backup`.
+
+## Step 59: SSL/HTTPS Configuration
+
+Setup SSL.
+
+Action:
+- Install Let's Encrypt certificates.
+- Force HTTPS.
+
+## Step 60: Production Checklist
+
+Final Review.
+
+Action:
+- Verify all systems go.
+
+# PART VII: ADVANCED UI/UX
+
+## Step 61: Advanced Data Visualization
+
+Add Charts.
+
+Frontend:
+- Install Recharts.
+- Visualize Dashboard data.
+
+## Step 62: Keyboard Shortcuts
+
+Add Hotkeys.
+
+Frontend:
+- `react-hotkeys-hook`.
+- Shortcuts for common actions.
+
+## Step 63: Infinite Scroll
+
+Add Infinite Scroll.
+
+Frontend:
+- Replace pagination with Infinite Scroll component.
+
+## Step 64: Drag and Drop
+
+Add Drag & Drop.
+
+Frontend:
+- `dnd-kit` for reordering items.
+
+## Step 65: Advanced Search with Filters
+
+Enhance Search.
+
+Frontend:
+- Complex filter UI (Facets).
+
+## Step 66: Real-Time Collaboration
+
+Add Collaboration.
+
+Frontend:
+- Show 'Who is viewing' using Echo.
+
+## Step 67: Activity Feed & Timeline
+
+Add Timeline.
+
+Frontend:
+- Visual history of changes.
+
+## Step 68: Theming System
+
+Advanced Theming.
+
+Frontend:
+- User customizable color schemes.
+
+## Step 69: Accessibility (A11y)
+
+Improve A11y.
+
+Frontend:
+- Audit ARIA labels and focus states.
+
+## Step 70: Internationalization (i18n)
+
+Add i18n.
+
+Frontend:
+- `react-i18next` implementation.
+
+# PART VIII: TESTING & QUALITY
+
+## Step 71: Unit Testing - Backend
+
+Write Unit Tests.
+
+Backend:
+- Test Services and Helpers with Pest.
+
+## Step 72: Integration Testing - API
+
+Write Feature Tests.
+
+Backend:
+- Test API endpoints (Happy/Sad paths) with Pest.
+
+## Step 73: Frontend Component Testing
+
+Write Component Tests.
+
+Frontend:
+- Test critical UI components.
+
+## Step 74: E2E Testing
+
+Write E2E Tests.
+
+General:
+- Playwright flows.
+
+## Step 75: Performance Testing
+
+Load Testing.
+
+General:
+- Artillery load tests.
+
+## Step 76: Security Testing
+
+Security Audit.
+
+General:
+- Check Permissions and Vulnerabilities.
+
+## Step 77: Code Quality & Linting
+
+Enforce Style.
+
+General:
+- Run Pint and ESLint.
+
+## Step 78: Documentation
+
+Final Docs.
+
+General:
+- Update all documentation.
+
+## Step 79: Continuous Improvement
+
+Feedback Loop.
+
+General:
+- Plan future updates.
+
+## Step 80: Maintenance Plan
+
+Maintenance.
+
+General:
+- Create update schedule.

@@ -2,15 +2,15 @@
 
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
-use App\Models\User;
-use App\Models\Shop;
 use App\Models\Category;
-use App\Models\Product;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\Product;
 use App\Models\Review;
+use App\Models\Shop;
+use App\Models\User;
 use App\Models\Wishlist;
+use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
@@ -36,18 +36,18 @@ class DatabaseSeeder extends Seeder
         // 4. Create Products (5 per Shop)
         $products = collect();
         foreach ($shops as $shop) {
-             // Pick random category
-             $productsForShop = Product::factory(5)->create([
-                 'shop_id' => $shop->id,
-                 'category_id' => $categories->random()->id
-             ]);
-             $products = $products->merge($productsForShop);
+            // Pick random category
+            $productsForShop = Product::factory(5)->create([
+                'shop_id' => $shop->id,
+                'category_id' => $categories->random()->id,
+            ]);
+            $products = $products->merge($productsForShop);
         }
 
         // 5. Create Reviews (5 total, random users/products)
         Review::factory(5)->create([
-            'user_id' => fn() => $customers->random()->id,
-            'product_id' => fn() => $products->random()->id,
+            'user_id' => fn () => $customers->random()->id,
+            'product_id' => fn () => $products->random()->id,
         ]);
 
         // 6. Create Wishlists (5 total)
@@ -61,15 +61,15 @@ class DatabaseSeeder extends Seeder
 
         // 7. Create Orders (5 total)
         $orders = Order::factory(5)->create([
-            'user_id' => fn() => $customers->random()->id,
+            'user_id' => fn () => $customers->random()->id,
         ]);
 
         // 8. Create Order Items (5 per Order)
         foreach ($orders as $order) {
             OrderItem::factory(5)->create([
                 'order_id' => $order->id,
-                'shop_id' => fn() => $shops->random()->id,
-                'product_id' => fn() => $products->random()->id,
+                'shop_id' => fn () => $shops->random()->id,
+                'product_id' => fn () => $products->random()->id,
             ]);
         }
     }

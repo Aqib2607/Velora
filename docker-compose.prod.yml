@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  # Backend App (PHP-FPM)
+  app:
+    build:
+      context: ./velora_backend
+      dockerfile: Dockerfile
+    image: velora-backend
+    container_name: velora-app
+    restart: unless-stopped
+    working_dir: /var/www
+    volumes:
+      - ./velora_backend:/var/www
+    networks:
+      - velora-network
+
+  # Backend Webserver (Nginx)
+  webserver:
+    image: nginx:alpine
+    container_name: velora-webserver
+    restart: unless-stopped
+    ports:
+      - "8000:80"
+    volumes:
+      - ./velora_backend:/var/www
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - app
+    networks:
+      - velora-network
+
+  # Database
+  db:
+    image: mysql:8.0
+    container_name: velora-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE:-velora_prod}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-secret}
+      MYSQL_USER: ${DB_USERNAME:-velora}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - dbdata:/var/lib/mysql
+    networks:
+      - velora-network
+
+  # Redis
+  redis:
+    image: redis:alpine
+    container_name: velora-redis
+    restart: unless-stopped
+    networks:
+      - velora-network
+
+  # Frontend
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: velora-frontend
+    container_name: velora-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    networks:
+      - velora-network
+
+networks:
+  velora-network:
+    driver: bridge
+
+volumes:
+  dbdata:
+    driver: local

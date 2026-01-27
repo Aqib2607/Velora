@@ -9,34 +9,32 @@ trait ApiResponse
     /**
      * Success Response
      *
-     * @param mixed $data
-     * @param string $message
-     * @param int $statusCode
-     * @return JsonResponse
+     * @param  string  $message
+     * @param  mixed  $data
+     * @param  int  $statusCode
      */
-    protected function successResponse($data, $message = "Success", $statusCode = 200): JsonResponse
+    protected function success($message, $data = [], $statusCode = 200): JsonResponse
     {
         return response()->json([
             'success' => true,
             'message' => $message,
-            'data'    => $data,
+            'data' => $data,
         ], $statusCode);
     }
 
     /**
      * Error Response
      *
-     * @param string $message
-     * @param mixed $errors
-     * @param int $statusCode
-     * @return JsonResponse
+     * @param  string  $message
+     * @param  int  $statusCode
+     * @param  mixed  $errors
      */
-    protected function errorResponse($message = "Error", $errors = null, $statusCode = 400): JsonResponse
+    protected function error($message, $statusCode = 400, $errors = null): JsonResponse
     {
         return response()->json([
             'success' => false,
             'message' => $message,
-            'errors'  => $errors,
+            'errors' => $errors,
         ], $statusCode);
     }
 }

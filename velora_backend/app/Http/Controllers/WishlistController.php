@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Product;
 use App\Models\Wishlist;
 use Illuminate\Http\Request;
 
@@ -16,6 +15,7 @@ class WishlistController extends BaseController
         $wishlists = $request->user()->wishlists()->with('product')->get();
         // Extract products for cleaner response
         $products = $wishlists->pluck('product');
+
         return $this->success('Wishlist retrieved successfully', \App\Http\Resources\ProductResource::collection($products));
     }
 
@@ -37,12 +37,14 @@ class WishlistController extends BaseController
 
         if ($wishlist) {
             $wishlist->delete();
+
             return $this->success('Removed from wishlist');
         } else {
             Wishlist::create([
                 'user_id' => $user->id,
                 'product_id' => $productId,
             ]);
+
             return $this->success('Added to wishlist');
         }
     }

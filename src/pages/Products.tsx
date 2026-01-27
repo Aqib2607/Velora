@@ -123,13 +123,34 @@ const allProducts = [
 const categories = ["All", "Electronics", "Fashion", "Home"];
 const sortOptions = ["Featured", "Price: Low to High", "Price: High to Low", "Rating"];
 
+import { InfiniteScroll } from "@/components/InfiniteScroll";
+import { ProductFilters } from "@/components/ProductFilters";
+import { AnimatePresence } from "framer-motion";
+
 export default function Products() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [showFilters, setShowFilters] = useState(false);
+  const [displayedProducts, setDisplayedProducts] = useState(allProducts.slice(0, 8));
+  const [hasMore, setHasMore] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const filteredProducts = selectedCategory === "All" 
-    ? allProducts 
+  // Filter products based on category (mock logic)
+  const filteredProducts = selectedCategory === "All"
+    ? allProducts
     : allProducts.filter(p => p.category === selectedCategory);
+
+  const handleLoadMore = () => {
+    setIsLoadingMore(true);
+    // Simulate API delay
+    setTimeout(() => {
+      setDisplayedProducts((prev) => {
+        const next = filteredProducts.slice(0, prev.length + 4);
+        if (next.length >= filteredProducts.length) setHasMore(false);
+        return next;
+      });
+      setIsLoadingMore(false);
+    }, 1000);
+  };
 
   return (
     <div className="min-h-screen pb-20 md:pb-8">
@@ -160,10 +181,9 @@ export default function Products() {
                 key={cat}
                 variant={selectedCategory === cat ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(cat)}
-                className={`rounded-full whitespace-nowrap ${
-                  selectedCategory === cat ? "gradient-bg" : "glass"
-                }`}
+                onClick={() => { setSelectedCategory(cat); setDisplayedProducts(allProducts.filter(p => cat === "All" || p.category === cat).slice(0, 8)); setHasMore(true); }}
+                className={`rounded-full whitespace-nowrap ${selectedCategory === cat ? "gradient-bg" : "glass"
+                  }`}
               >
                 {cat}
               </Button>
@@ -175,7 +195,7 @@ export default function Products() {
             <Button
               variant="outline"
               size="sm"
-              className="glass rounded-full gap-2"
+              className={`glass rounded-full gap-2 ${showFilters ? 'bg-primary/10 border-primary' : ''}`}
               onClick={() => setShowFilters(!showFilters)}
             >
               <SlidersHorizontal className="h-4 w-4" />
@@ -188,41 +208,54 @@ export default function Products() {
           </div>
         </motion.div>
 
-        {/* Results Count */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.2 }}
-          className="text-sm text-muted-foreground mb-6"
-        >
-          Showing {filteredProducts.length} products
-        </motion.p>
+        <div className="flex gap-8">
+          {/* Advanced Filters Sidebar */}
+          <AnimatePresence>
+            {showFilters && (
+              <motion.div
+                initial={{ opacity: 0, width: 0, x: -20 }}
+                animate={{ opacity: 1, width: 280, x: 0 }}
+                exit={{ opacity: 0, width: 0, x: -20 }}
+                className="hidden lg:block flex-shrink-0 overflow-hidden"
+              >
+                <ProductFilters />
+              </motion.div>
+            )}
+          </AnimatePresence>
 
-        {/* Products Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-          {filteredProducts.map((product, index) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
+          <div className="flex-1">
+            {/* Results Count */}
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.2 }}
+              className="text-sm text-muted-foreground mb-6"
             >
-              <ProductCard {...product} />
-            </motion.div>
-          ))}
-        </div>
+              Showing {displayedProducts.length} of {filteredProducts.length} products
+            </motion.p>
 
-        {/* Load More */}
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="flex justify-center mt-12"
-        >
-          <Button variant="outline" size="lg" className="rounded-full glass px-8">
-            Load More Products
-          </Button>
-        </motion.div>
+            {/* Products Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {displayedProducts.map((product, index) => (
+                <motion.div
+                  key={product.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <ProductCard {...product} />
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Infinite Scroll */}
+            <InfiniteScroll
+              onLoadMore={handleLoadMore}
+              hasMore={hasMore && displayedProducts.length < filteredProducts.length}
+              isLoading={isLoadingMore}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

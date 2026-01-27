@@ -9,10 +9,11 @@ class CategoryFactory extends Factory
 {
     public function definition(): array
     {
-        $name = ucfirst(fake()->word()) . ' ' . ucfirst(fake()->word()); // "Generic Category"
+        $name = ucfirst(fake()->word()).' '.ucfirst(fake()->word()); // "Generic Category"
+
         return [
             'name' => $name,
-            'slug' => Str::slug($name) . '-' . Str::random(5),
+            'slug' => Str::slug($name).'-'.Str::random(5),
         ];
     }
 }

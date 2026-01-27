@@ -11,7 +11,6 @@ class ShopController extends BaseController
     /**
      * Register a new shop for the authenticated user.
      *
-     * @param  \Illuminate\Http\Request  $request
      * @return \Illuminate\Http\JsonResponse
      */
     public function register(Request $request)
@@ -48,11 +47,11 @@ class ShopController extends BaseController
     public function show(string $slug)
     {
         $shop = Shop::where('slug', $slug)->firstOrFail();
-        
+
         // Eager load products for this shop with pagination
         // Since we can't easily paginate a relationship on a single model instance in one query return,
         // we'll fetch products separately.
-        
+
         $products = \App\Models\Product::where('shop_id', $shop->id)
             ->where('status', 'published')
             ->paginate(12);
@@ -64,7 +63,7 @@ class ShopController extends BaseController
         $data['total_products'] = $shop->products()->where('status', 'published')->count();
         // $data['average_rating'] = ... (Need to calculate via products -> reviews)
         // Leaving avg rating simple for now or 0.
-        
+
         return $this->success('Shop details retrieved successfully', $data);
     }
 }

@@ -37,11 +37,11 @@ class ReviewController extends BaseController
              ->whereHas('items', fn($q) => $q->where('product_id', $productId))
              ->exists();
         */
-        
+
         // Let's stick to the prompt's instruction broadly.
         // I will use `exists` regardless of status for now, as payment usually confirms purchase.
         // But better: payment_status = 'paid'.
-        
+
         $hasPurchased = Order::where('user_id', $user->id)
             ->where('payment_status', 'paid')
             ->whereHas('items', function ($query) use ($productId) {

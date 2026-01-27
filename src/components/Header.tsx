@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
 import { useState } from "react";
 import { useCart } from "@/contexts/CartContext";
+import NotificationBell from "./NotificationBell";
 
 const navLinks = [
   { href: "/", label: "Home" },
@@ -102,6 +103,8 @@ export function Header() {
           </motion.div>
 
           <ThemeToggle />
+
+          <NotificationBell />
 
           <Link to="/checkout">
             <Button variant="ghost" size="icon" className="relative h-10 w-10 rounded-full">

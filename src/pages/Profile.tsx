@@ -1,21 +1,143 @@
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, MapPin, Edit2, Camera, Shield, Bell, CreditCard } from "lucide-react";
+import { User, Mail, Phone, MapPin, Edit2, Camera, Shield, Bell, CreditCard, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
+import api from "@/lib/axios";
+
+// Schema for Profile Update
+const profileSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Invalid email address"),
+  phone: z.string().optional(),
+  bio: z.string().optional(),
+});
+
+type ProfileFormValues = z.infer<typeof profileSchema>;
+
+interface UserData {
+  id: number;
+  name: string;
+  email: string;
+  phone?: string;
+  bio?: string;
+  avatar_url?: string;
+  created_at: string;
+}
 
 const Profile = () => {
-  const user = {
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 234 567 8900",
-    avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-    address: "123 Main Street, New York, NY 10001",
-    memberSince: "January 2024"
+  const [user, setUser] = useState<UserData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<ProfileFormValues>({
+    resolver: zodResolver(profileSchema),
+    defaultValues: { name: "", email: "", phone: "", bio: "" }
+  });
+
+  // Fetch User Data
+  useEffect(() => {
+    const fetchUser = async () => {
+      try {
+        const response = await api.get("/user"); // Matches GET /user endpoint
+        const userData = response.data.data;
+        setUser(userData);
+        form.reset({
+          name: userData.name,
+          email: userData.email,
+          phone: userData.phone || "",
+          bio: userData.bio || ""
+        });
+      } catch (error) {
+        toast({
+          variant: "destructive",
+          title: "Error fetching profile",
+          description: "Could not load user data."
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchUser();
+  }, [toast, form]);
+
+  // Handle Profile Update
+  const onSubmit = async (data: ProfileFormValues) => {
+    setIsSaving(true);
+    try {
+      const response = await api.put("/user/profile", data);
+      setUser(response.data.data); // Update local state
+      setIsEditing(false);
+      toast({
+        title: "Profile updated",
+        description: "Your information has been saved."
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Update failed",
+        description: error.response?.data?.message || "Could not save changes."
+      });
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  // Handle Avatar Upload
+  const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("avatar", file);
+
+    try {
+      // Show loading toast or state if desired
+      toast({ title: "Uploading avatar...", description: "Please wait." });
+
+      const response = await api.post("/user/avatar", formData, {
+        headers: { "Content-Type": "multipart/form-data" }
+      });
+
+      // Update local user state with new avatar URL
+      if (user) {
+        setUser({ ...user, avatar_url: response.data.data.avatar_url });
+      }
+
+      toast({
+        title: "Avatar updated",
+        description: "Your profile picture has been changed."
+      });
+
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error.response?.data?.message || "Could not upload image."
+      });
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center pt-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!user) return null;
 
   return (
     <div className="min-h-screen bg-background pt-20 pb-24 md:pb-8">
@@ -29,26 +151,37 @@ const Profile = () => {
           <Card className="glass-card mb-8">
             <CardContent className="p-6">
               <div className="flex flex-col md:flex-row items-center gap-6">
-                <div className="relative">
+                <div className="relative group">
                   <img
-                    src={user.avatar}
+                    src={user.avatar_url || "https://github.com/shadcn.png"}
                     alt={user.name}
-                    className="w-24 h-24 rounded-full object-cover ring-4 ring-primary/20"
+                    className="w-24 h-24 rounded-full object-cover ring-4 ring-primary/20 aspect-square"
                   />
-                  <Button
-                    size="icon"
-                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full"
+                  <Label
+                    htmlFor="avatar-upload"
+                    className="absolute -bottom-2 -right-2 h-8 w-8 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer hover:bg-primary/90 transition-colors"
                   >
                     <Camera className="h-4 w-4" />
-                  </Button>
+                    <Input
+                      id="avatar-upload"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      onChange={handleAvatarChange}
+                    />
+                  </Label>
                 </div>
                 <div className="text-center md:text-left flex-1">
                   <h1 className="text-2xl font-bold text-foreground">{user.name}</h1>
-                  <p className="text-muted-foreground">Member since {user.memberSince}</p>
+                  <p className="text-muted-foreground">Member since {new Date(user.created_at).toLocaleDateString()}</p>
                 </div>
-                <Button variant="outline" className="gap-2">
+                <Button
+                  variant={isEditing ? "secondary" : "outline"}
+                  className="gap-2"
+                  onClick={() => setIsEditing(!isEditing)}
+                >
                   <Edit2 className="h-4 w-4" />
-                  Edit Profile
+                  {isEditing ? "Cancel Edit" : "Edit Profile"}
                 </Button>
               </div>
             </CardContent>
@@ -56,7 +189,7 @@ const Profile = () => {
 
           {/* Settings Tabs */}
           <Tabs defaultValue="personal" className="space-y-6">
-            <TabsList className="glass-card w-full justify-start gap-2 p-2">
+            <TabsList className="glass-card w-full justify-start gap-2 p-2 overflow-x-auto">
               <TabsTrigger value="personal" className="gap-2">
                 <User className="h-4 w-4" />
                 Personal Info
@@ -80,113 +213,108 @@ const Profile = () => {
                 <CardHeader>
                   <CardTitle>Personal Information</CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Full Name</Label>
-                      <div className="relative">
-                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="name" defaultValue={user.name} className="pl-10" />
+                <CardContent>
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Full Name</Label>
+                        <div className="relative">
+                          <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="name"
+                            {...form.register("name")}
+                            className="pl-10"
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        {form.formState.errors.name && <p className="text-xs text-destructive">{form.formState.errors.name.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email</Label>
+                        <div className="relative">
+                          <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="email"
+                            {...form.register("email")}
+                            className="pl-10"
+                            disabled={!isEditing}
+                          />
+                        </div>
+                        {form.formState.errors.email && <p className="text-xs text-destructive">{form.formState.errors.email.message}</p>}
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <div className="relative">
+                          <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                          <Input
+                            id="phone"
+                            {...form.register("phone")}
+                            className="pl-10"
+                            disabled={!isEditing}
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-2 md:col-span-2">
+                        <Label htmlFor="bio">Bio</Label>
+                        <div className="relative">
+                          {/* Using Input as textarea replacement for now to keep style consistent, or update to Textarea */}
+                          <Input
+                            id="bio"
+                            {...form.register("bio")}
+                            className="pl-3"
+                            disabled={!isEditing}
+                            placeholder="Tell us about yourself"
+                          />
+                        </div>
                       </div>
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email</Label>
-                      <div className="relative">
-                        <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="email" defaultValue={user.email} className="pl-10" />
+
+                    {isEditing && (
+                      <div className="flex justify-end">
+                        <Button type="submit" disabled={isSaving}>
+                          {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                          Save Changes
+                        </Button>
                       </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <div className="relative">
-                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="phone" defaultValue={user.phone} className="pl-10" />
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="address">Address</Label>
-                      <div className="relative">
-                        <MapPin className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                        <Input id="address" defaultValue={user.address} className="pl-10" />
-                      </div>
-                    </div>
-                  </div>
-                  <Button>Save Changes</Button>
+                    )}
+                  </form>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="security">
+              {/* Static Security Content - Future Step */}
               <Card className="glass-card">
                 <CardHeader>
                   <CardTitle>Security Settings</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                      <div>
-                        <h4 className="font-medium">Two-Factor Authentication</h4>
-                        <p className="text-sm text-muted-foreground">Add an extra layer of security</p>
-                      </div>
-                      <Switch />
-                    </div>
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                      <div>
-                        <h4 className="font-medium">Login Alerts</h4>
-                        <p className="text-sm text-muted-foreground">Get notified of new logins</p>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-                  </div>
-                  <Button variant="outline">Change Password</Button>
+                  <p className="text-muted-foreground">Security settings will be implemented in a future update.</p>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="notifications">
+              {/* Static Notifications Content - Future Step */}
               <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Notification Preferences</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {[
-                    { title: "Order Updates", desc: "Get notified about your orders" },
-                    { title: "Promotions", desc: "Receive special offers and deals" },
-                    { title: "New Arrivals", desc: "Be first to know about new products" },
-                    { title: "Price Drops", desc: "Alerts for wishlist price changes" }
-                  ].map((item) => (
-                    <div key={item.title} className="flex items-center justify-between p-4 rounded-lg bg-muted/50">
-                      <div>
-                        <h4 className="font-medium">{item.title}</h4>
-                        <p className="text-sm text-muted-foreground">{item.desc}</p>
-                      </div>
-                      <Switch defaultChecked />
-                    </div>
-                  ))}
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground">Notification settings coming soon.</p>
                 </CardContent>
               </Card>
             </TabsContent>
 
             <TabsContent value="payment">
+              {/* Static Payment Content - Future Step */}
               <Card className="glass-card">
-                <CardHeader>
-                  <CardTitle>Payment Methods</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="p-4 rounded-lg border border-primary bg-primary/5 flex items-center gap-4">
-                    <div className="w-12 h-8 bg-gradient-to-r from-blue-600 to-blue-400 rounded flex items-center justify-center text-white text-xs font-bold">
-                      VISA
-                    </div>
-                    <div className="flex-1">
-                      <p className="font-medium">•••• •••• •••• 4242</p>
-                      <p className="text-sm text-muted-foreground">Expires 12/26</p>
-                    </div>
-                    <Button variant="ghost" size="sm">Remove</Button>
-                  </div>
-                  <Button variant="outline" className="w-full">Add New Card</Button>
+                <CardContent className="pt-6">
+                  <p className="text-muted-foreground">Payment methods coming soon.</p>
                 </CardContent>
               </Card>
             </TabsContent>
+
           </Tabs>
         </motion.div>
       </div>

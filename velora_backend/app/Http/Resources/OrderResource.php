@@ -16,7 +16,7 @@ class OrderResource extends JsonResource
     {
         return [
             'id' => $this->id,
-            'order_number' => '#ORD-' . str_pad($this->id, 6, '0', STR_PAD_LEFT),
+            'order_number' => '#ORD-'.str_pad($this->id, 6, '0', STR_PAD_LEFT),
             'total_amount' => (float) $this->total_amount,
             'status' => $this->status,
             'payment_status' => $this->payment_status,

@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Order;
-use App\Models\OrderItem;
 use App\Models\Product;
 use App\Services\PaymentService;
 use Illuminate\Http\Request;
@@ -11,11 +10,12 @@ use Illuminate\Support\Facades\DB;
 
 class CheckoutController extends BaseController
 {
-    protected $paymentService;
+    protected $orderService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, \App\Services\OrderService $orderService)
     {
         $this->paymentService = $paymentService;
+        $this->orderService = $orderService;
     }
 
     /**
@@ -27,61 +27,38 @@ class CheckoutController extends BaseController
             'items' => 'required|array',
             'items.*.product_id' => 'required|exists:products,id',
             'items.*.quantity' => 'required|integer|min:1',
-            'shipping_address' => 'required|array', // Assume full address object for now
-            'payment_method' => 'required|string|in:stripe,sslcommerz',
+            'shipping_address' => 'required|array',
+            'payment_method' => 'required|string|in:stripe,sslcommerz,cod',
         ]);
 
-        $user = $request->user();
-        $inputItems = $request->input('items');
-        $productIds = collect($inputItems)->pluck('product_id');
-        $products = Product::whereIn('id', $productIds)->get()->keyBy('id');
+        try {
+            $order = $this->orderService->createOrder(
+                $request->user(),
+                $request->input('items'),
+                $request->input('payment_method'),
+                $request->input('shipping_address')
+            );
+        } catch (\Exception $e) {
+            return $this->error($e->getMessage(), 400);
+        }
 
-        $totalAmount = 0;
-        $orderItemsData = [];
-
-        // 1. Calculate and Validate
-        foreach ($inputItems as $item) {
-            $product = $products[$item['product_id']] ?? null;
-            if (! $product || $product->stock_quantity < $item['quantity']) {
-                return $this->error("Product '{$product->name}' is out of stock or requested quantity unavailable.", 400);
+        // Initiate Payment if needed
+        $clientSecret = null;
+        if ($request->payment_method === 'stripe') {
+            try {
+                $clientSecret = $this->paymentService->createPaymentIntent($order);
+            } catch (\Exception $e) {
+                // If payment intent fails, do we delete order?
+                // Or keep it pending payment?
+                // Keep it, frontend can retry payment.
+                return $this->error('Order created but payment initialization failed: '.$e->getMessage(), 500, ['order_id' => $order->id]);
             }
-
-            $lineTotal = $product->price * $item['quantity'];
-            $totalAmount += $lineTotal;
-
-            $orderItemsData[] = [
-                'product_id' => $product->id,
-                'shop_id' => $product->shop_id,
-                'quantity' => $item['quantity'],
-                'unit_price' => $product->price,
-                'total' => $lineTotal,
-            ];
         }
-
-        // 2. Create Order (Pending Payment)
-        $order = Order::create([
-            'user_id' => $user->id,
-            'total_amount' => $totalAmount,
-            'subtotal' => $totalAmount, // Assuming no tax/shipping calc for now
-            'tax' => 0,
-            'status' => 'pending',
-            'payment_status' => 'unpaid',
-            'payment_method' => $request->payment_method,
-            'shipping_address' => $request->shipping_address,
-        ]);
-
-        // 3. Create Order Items
-        foreach ($orderItemsData as $itemData) {
-            $order->items()->create($itemData);
-        }
-
-        // 4. Initiate Payment
-        $clientSecret = $this->paymentService->createPaymentIntent($order);
 
         return $this->success('Checkout initiated', [
             'order_id' => $order->id,
-            'total_amount' => $totalAmount,
-            'client_secret' => $clientSecret, 
+            'total_amount' => $order->total_amount,
+            'client_secret' => $clientSecret,
         ]);
     }
 
@@ -92,7 +69,7 @@ class CheckoutController extends BaseController
     {
         // In reality, this endpoint would verify the Stripe Webhook signature.
         // For simulation, we accept order_id and mock payment ID.
-        
+
         $request->validate([
             'order_id' => 'required|exists:orders,id',
             // 'payment_intent_id' => 'required',
@@ -107,6 +84,7 @@ class CheckoutController extends BaseController
 
             if ($order->payment_status === 'paid') {
                 DB::rollBack();
+
                 return $this->success('Order already paid');
             }
 
@@ -121,12 +99,12 @@ class CheckoutController extends BaseController
                 if ($product && $product->stock_quantity >= $item->quantity) {
                     $product->decrement('stock_quantity', $item->quantity);
                 } else {
-                    // Critical error: Stock mismatch during payment! 
+                    // Critical error: Stock mismatch during payment!
                     // In real world, refund or handle gracefully.
                     throw new \Exception("Stock error for product {$item->product_id}");
                 }
             }
-            
+
             // 3. Send Email (Queue)
             // Mail::to($order->user)->queue(new OrderConfirmation($order));
 
@@ -136,7 +114,8 @@ class CheckoutController extends BaseController
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return $this->error('Failed to finalize order: ' . $e->getMessage(), 500);
+
+            return $this->error('Failed to finalize order: '.$e->getMessage(), 500);
         }
     }
 }

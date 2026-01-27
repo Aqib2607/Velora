@@ -17,7 +17,7 @@ class CategoryController extends BaseController
         $categories = \Illuminate\Support\Facades\Cache::remember('categories_tree', 60 * 24, function () {
             return Category::with('children')->whereNull('parent_id')->get();
         });
-        
+
         return $this->success('Categories retrieved successfully', $categories);
     }
 
@@ -46,6 +46,7 @@ class CategoryController extends BaseController
     public function show(string $id)
     {
         $category = Category::with('children', 'parent')->findOrFail($id);
+
         return $this->success('Category retrieved successfully', $category);
     }
 
@@ -80,6 +81,7 @@ class CategoryController extends BaseController
     public function destroy(string $id)
     {
         Category::destroy($id);
+
         return $this->success('Category deleted successfully');
     }
 }

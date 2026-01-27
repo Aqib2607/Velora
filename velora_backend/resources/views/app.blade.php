@@ -21,14 +21,14 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@Velora" />
   <meta name="twitter:image" content="/velora_thumbnail.png" />
-  <script type="module" crossorigin src="/assets/index-CTWQSOWr.js"></script>
-  <link rel="modulepreload" crossorigin href="/assets/vendor-aPHr_pbu.js">
-  <link rel="modulepreload" crossorigin href="/assets/ui-DSsOl-Wy.js">
-  <link rel="stylesheet" crossorigin href="/assets/index-D9P43fty.css">
+  <script type="module" crossorigin src="/assets/index-k8_Yghp_.js"></script>
+  <link rel="modulepreload" crossorigin href="/assets/vendor-BfG0jImR.js">
+  <link rel="modulepreload" crossorigin href="/assets/ui-4XqIOJKK.js">
+  <link rel="stylesheet" crossorigin href="/assets/index-ChMDZpic.css">
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root"></div>
 </body>
 
 </html>
