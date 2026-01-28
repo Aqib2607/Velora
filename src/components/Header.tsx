@@ -1,26 +1,77 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingCart, User, Search, Menu } from "lucide-react";
+import { ShoppingCart, User, Search, Menu, LogIn, LogOut, LayoutDashboard, ShoppingBag, Settings, Store } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
-import { useState } from "react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useState, useEffect } from "react";
 import { useCart } from "@/contexts/CartContext";
 import NotificationBell from "./NotificationBell";
+import api from "@/lib/axios";
 
 const navLinks = [
   { href: "/", label: "Home" },
   { href: "/products", label: "Products" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-  { href: "/vendor-dashboard", label: "Vendor" },
   { href: "/checkout", label: "Cart" },
 ];
 
 export function Header() {
   const location = useLocation();
+  const navigate = useNavigate();
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { cartCount } = useCart();
+  const [user, setUser] = useState<any>(null);
+
+  useEffect(() => {
+    const checkAuth = () => {
+      const userStr = localStorage.getItem("user");
+      if (userStr) {
+        setUser(JSON.parse(userStr));
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, [location.pathname]);
+
+  const handleLogout = async () => {
+    try {
+      await api.post("/auth/logout");
+    } catch (error) {
+      console.error("Logout failed", error);
+    } finally {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUser(null);
+      navigate("/");
+      window.location.reload(); // Ensure state is clean
+    }
+  };
+
+  const getDashboardLink = () => {
+    if (!user) return "/login";
+    if (user.role === 'shop_owner') return '/vendor/dashboard';
+    if (user.role === 'admin') return '/admin/orders';
+    return '/dashboard';
+  };
+
+  const getOrdersLink = () => {
+    if (!user) return "/login";
+    if (user.role === 'shop_owner') return '/vendor/orders';
+    if (user.role === 'admin') return '/admin/orders';
+    return '/orders';
+  };
 
   return (
     <motion.header
@@ -117,11 +168,47 @@ export function Header() {
             </Button>
           </Link>
 
-          <Link to="/login">
-            <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full">
-              <User className="h-5 w-5" />
-            </Button>
-          </Link>
+          {user ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" title="Account">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="font-normal">
+                  <div className="flex flex-col space-y-1">
+                    <p className="text-sm font-medium leading-none">{user.name}</p>
+                    <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                  </div>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => navigate(getDashboardLink())}>
+                  {user.role === 'shop_owner' ? <Store className="mr-2 h-4 w-4" /> : <LayoutDashboard className="mr-2 h-4 w-4" />}
+                  Dashboard
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate('/profile')}>
+                  <User className="mr-2 h-4 w-4" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => navigate(getOrdersLink())}>
+                  <ShoppingBag className="mr-2 h-4 w-4" />
+                  Orders
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-600">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log out
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <Link to="/login">
+              <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" title="Sign In">
+                <LogIn className="h-5 w-5" />
+              </Button>
+            </Link>
+          )}
 
           <Sheet>
             <SheetTrigger asChild>

@@ -20,7 +20,7 @@ class UpdateProductRequest extends FormRequest
             'stock_quantity' => 'sometimes|required|integer|min:0',
             'category_id' => 'sometimes|required|exists:categories,id',
             'images' => 'nullable|array',
-            'images.*' => 'string',
+            'images.*' => 'image|max:2048',
             'status' => 'sometimes|required|in:draft,published,archived',
             'is_featured' => 'boolean',
             'metadata' => 'nullable|array',

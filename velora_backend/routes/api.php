@@ -94,12 +94,19 @@ Route::prefix('v1')->group(function () {
 
         // Vendor Routes
         Route::middleware('role:shop_owner')->group(function () {
+            Route::post('/shop/register', [\App\Http\Controllers\ShopController::class, 'store']);
+            Route::get('/shop/me', [\App\Http\Controllers\ShopController::class, 'me']);
+            Route::put('/shop/me', [\App\Http\Controllers\ShopController::class, 'update']);
+            Route::get('/vendor/dashboard', [\App\Http\Controllers\ShopController::class, 'dashboard']); // Dashboard stats
+            
+            Route::get('/vendor/products', [\App\Http\Controllers\ProductController::class, 'vendorIndex']); // List vendor products
             Route::post('/products', [\App\Http\Controllers\ProductController::class, 'store']);
             Route::put('/products/{id}', [\App\Http\Controllers\ProductController::class, 'update']);
             Route::delete('/products/{id}', [\App\Http\Controllers\ProductController::class, 'destroy']);
             Route::post('/products/{id}/restore', [\App\Http\Controllers\ProductController::class, 'restore']);
+            
             Route::get('/vendor/orders', [\App\Http\Controllers\OrderController::class, 'vendorOrders']);
-            Route::get('/vendor/stats', [\App\Http\Controllers\AnalyticsController::class, 'vendorStats']);
+            Route::patch('/vendor/orders/items/{id}/status', [\App\Http\Controllers\OrderController::class, 'updateItemStatus']); // Update item status
         });
 
         // Admin Routes

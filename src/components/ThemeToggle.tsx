@@ -15,8 +15,7 @@ export function ThemeToggle() {
     >
       <motion.div
         initial={false}
-        animate={{ rotate: theme === "dark" ? 180 : 0 }}
-        transition={{ duration: 0.3, ease: "easeInOut" }}
+        animate={{ scale: theme === "dark" ? 1 : 1 }}
         className="relative"
       >
         <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />

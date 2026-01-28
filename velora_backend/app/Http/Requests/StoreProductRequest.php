@@ -22,7 +22,7 @@ class StoreProductRequest extends FormRequest
             'stock_quantity' => 'required|integer|min:0',
             'category_id' => 'required|exists:categories,id',
             'images' => 'nullable|array',
-            'images.*' => 'string', // URL or path
+            'images.*' => 'image|max:2048', // Allow images up to 2MB
             'status' => 'required|in:draft,published,archived',
             'is_featured' => 'boolean',
             'metadata' => 'nullable|array',

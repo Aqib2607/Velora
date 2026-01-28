@@ -78,6 +78,9 @@ class OrderController extends BaseController
     /**
      * Update order status.
      */
+    /**
+     * Update order status (Admin only).
+     */
     public function updateStatus(Request $request, string $id)
     {
         $request->validate([
@@ -85,37 +88,40 @@ class OrderController extends BaseController
         ]);
 
         $user = $request->user();
-        $order = Order::findOrFail($id);
-
-        // Admin can update global order status
-        if ($user->hasRole('admin')) {
-            $order->status = $request->status;
-            $order->save();
-
-            return $this->success('Order status updated successfully', $order);
+        
+        if (!$user->hasRole('admin')) {
+             return $this->error('Unauthorized', 403);
         }
 
-        // Vendor can only "update" status in a limited way?
-        // Prompt 32 says: "Role: Admin or Shop Owner (for their specific items)."
-        // Usually vendors update item status (e.g. shipping their package).
-        // But for simplicity of this prompt, let's assume if it's an "Order Status Update",
-        // maybe it implies updating the whole order if they are the only vendor?
-        // Or strictly updating items?
-        // Prompt says: "Update status (e.g., 'shipped'). Trigger notification."
+        $order = Order::findOrFail($id);
+        $order->status = $request->status;
+        $order->save();
 
-        // Let's implement Item Status update for vendors, and Order Status for Admin.
-        // But the endpoint is /api/orders/{id}/status.
+        return $this->success('Order status updated successfully', $order);
+    }
 
-        // If a vendor hits this, maybe we check if they own items in it?
-        // Let's restrict this generic "Update Order" to Admin for now,
-        // and if a specific item update is needed we'd do /api/orders/{id}/items/{item_id}/status.
-        // However, prompt implies "Manage Order Lifecycle".
+    /**
+     * Update individual order item status (Vendor).
+     */
+    public function updateItemStatus(Request $request, string $id)
+    {
+        $request->validate([
+            'status' => 'required|in:pending,processing,shipped,delivered,cancelled',
+        ]);
 
-        // Let's stick to Admin for global status.
-        // And maybe add a check: if User is ShopOwner AND order contains their items -> allowed?
-        // But an order might have multiple shops. One shop confirming shipment shouldn't mark whole order shipped if others pending.
+        $user = $request->user();
+        if (!$user->shop) {
+             return $this->error('Unauthorized', 403);
+        }
 
-        return $this->error('Only admins can update global order status. (Vendor item status update not implemented in this scope)', 403);
+        $orderItem = OrderItem::where('id', $id)
+            ->where('shop_id', $user->shop->id)
+            ->firstOrFail();
+
+        $orderItem->status = $request->status;
+        $orderItem->save();
+
+        return $this->success('Item status updated successfully', $orderItem);
     }
 
     /**

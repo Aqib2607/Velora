@@ -11,6 +11,13 @@ import { AIChatbot } from "@/components/AIChatbot";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import React, { Suspense } from "react";
 import SEO from "@/components/SEO";
+import { HelmetProvider } from "react-helmet-async";
+
+// Component Imports
+import { CartProvider } from "@/contexts/CartContext";
+import RequireAuth from "./components/RequireAuth";
+import RequireRole from "./components/RequireRole";
+import DashboardLayout from "./components/DashboardLayout";
 
 // Lazy Load Pages
 const Index = React.lazy(() => import("./pages/Index"));
@@ -32,7 +39,6 @@ const SearchResults = React.lazy(() => import("./pages/SearchResults"));
 const Deals = React.lazy(() => import("./pages/Deals"));
 const About = React.lazy(() => import("./pages/About"));
 const Contact = React.lazy(() => import("./pages/Contact"));
-const VendorDashboard = React.lazy(() => import("./pages/VendorDashboard"));
 const ShippingPolicy = React.lazy(() => import("./pages/ShippingPolicy"));
 const UserDashboard = React.lazy(() => import("./pages/UserDashboard"));
 const Settings = React.lazy(() => import("./pages/Settings"));
@@ -40,11 +46,17 @@ const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"));
 const VerifyPrompt = React.lazy(() => import("./pages/VerifyPrompt"));
 const OrderList = React.lazy(() => import("./pages/admin/OrderList"));
 
-// Component Imports
-import { CartProvider } from "@/contexts/CartContext";
-import RequireAuth from "./components/RequireAuth";
-import RequireRole from "./components/RequireRole";
-import DashboardLayout from "./components/DashboardLayout";
+const VendorLayout = React.lazy(() => import("./components/VendorLayout"));
+const VendorOverview = React.lazy(() => import("./pages/vendor/VendorOverview"));
+const VendorProducts = React.lazy(() => import("./pages/vendor/VendorProducts"));
+const VendorOrders = React.lazy(() => import("./pages/vendor/VendorOrders"));
+const VendorSettings = React.lazy(() => import("./pages/vendor/VendorSettings"));
+
+const AdminLayout = React.lazy(() => import("./components/AdminLayout"));
+const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
+const AdminUsers = React.lazy(() => import("./pages/admin/AdminUsers"));
+const AdminCategories = React.lazy(() => import("./pages/admin/AdminCategories"));
+const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings"));
 
 // Loading Component
 const PageLoader = () => (
@@ -75,10 +87,6 @@ function AppLayout({ children }: { children: React.ReactNode }) {
     </>
   );
 }
-
-import { HelmetProvider } from "react-helmet-async";
-
-// ... existing imports
 
 const App = () => (
   <HelmetProvider>
@@ -128,12 +136,24 @@ const App = () => (
 
                     {/* Role Protected Routes */}
                     <Route element={<RequireRole role="admin" />}>
-                      <Route path="/admin/security" element={<SecurityPanel />} />
-                      <Route path="/admin/orders" element={<OrderList />} />
+                      <Route element={<AdminLayout />}>
+                        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                        <Route path="/admin/users" element={<AdminUsers />} />
+                        <Route path="/admin/categories" element={<AdminCategories />} />
+                        <Route path="/admin/products" element={<Products />} /> {/* Reuse Products page for now or build AdminProducts */}
+                        <Route path="/admin/orders" element={<OrderList />} />
+                        <Route path="/admin/settings" element={<AdminSettings />} />
+                        <Route path="/admin/security" element={<SecurityPanel />} />
+                      </Route>
                     </Route>
 
                     <Route element={<RequireRole role="shop_owner" />}>
-                      <Route path="/vendor-dashboard" element={<VendorDashboard />} />
+                      <Route element={<VendorLayout />}>
+                        <Route path="/vendor/dashboard" element={<VendorOverview />} />
+                        <Route path="/vendor/products" element={<VendorProducts />} />
+                        <Route path="/vendor/orders" element={<VendorOrders />} />
+                        <Route path="/vendor/settings" element={<VendorSettings />} />
+                      </Route>
                     </Route>
 
                     <Route path="*" element={<NotFound />} />

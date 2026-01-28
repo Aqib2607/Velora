@@ -58,8 +58,14 @@ export default function Login() {
         description: `Welcome back, ${user.name}!`,
       });
 
-      // Redirect to dashboard/home
-      navigate("/");
+      // Redirect based on role
+      if (user.role === 'admin') {
+        navigate("/admin/dashboard");
+      } else if (user.role === 'shop_owner') {
+        navigate("/vendor/dashboard");
+      } else {
+        navigate("/dashboard"); // Or "/"
+      }
 
     } catch (error: any) {
       if (error.response?.status === 422) {

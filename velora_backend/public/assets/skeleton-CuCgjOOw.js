@@ -1,0 +1,1 @@
+import{j as m}from"./ui-CXX9-mUI.js";import{e as o}from"./index-BwQv8Fss.js";function n({className:e,...t}){return m.jsx("div",{className:o("animate-pulse rounded-md bg-muted",e),...t})}export{n as S};

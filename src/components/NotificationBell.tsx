@@ -47,28 +47,30 @@ export default function NotificationBell() {
         if (userStr) {
             const user = JSON.parse(userStr);
             // Listen to private channel
-            echo.private(`App.Models.User.${user.id}`)
-                .notification((notification: any) => {
-                    // Add to list
-                    const newNote: Notification = {
-                        id: notification.id,
-                        data: { title: notification.title, message: notification.message },
-                        created_at: new Date().toISOString(),
-                        read_at: null
-                    };
+            if (echo) {
+                echo.private(`App.Models.User.${user.id}`)
+                    .notification((notification: any) => {
+                        // Add to list
+                        const newNote: Notification = {
+                            id: notification.id,
+                            data: { title: notification.title, message: notification.message },
+                            created_at: new Date().toISOString(),
+                            read_at: null
+                        };
 
-                    setNotifications(prev => [newNote, ...prev]);
-                    setUnreadCount(prev => prev + 1);
+                        setNotifications(prev => [newNote, ...prev]);
+                        setUnreadCount(prev => prev + 1);
 
-                    toast({
-                        title: notification.title,
-                        description: notification.message,
+                        toast({
+                            title: notification.title,
+                            description: notification.message,
+                        });
                     });
-                });
+            }
         }
 
         return () => {
-            if (userStr) {
+            if (userStr && echo) {
                 const user = JSON.parse(userStr);
                 echo.leave(`App.Models.User.${user.id}`);
             }

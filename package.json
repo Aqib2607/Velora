@@ -5,12 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "vite build && node deploy.js",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest",
-    "deploy": "npm run build && node deploy.js"
+    "deploy": "npm run build"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

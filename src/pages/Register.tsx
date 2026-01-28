@@ -66,15 +66,21 @@ export default function Register() {
             };
 
             const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000/api/v1";
-            await axios.post(`${apiUrl}/auth/register`, payload);
+            const response = await axios.post(`${apiUrl}/auth/register`, payload);
+
+            const { token, user } = response.data.data;
+
+            // Store token and user data (Auto-login)
+            localStorage.setItem("token", token);
+            localStorage.setItem("user", JSON.stringify(user));
 
             toast({
                 title: "Registration successful!",
-                description: "Please check your email to verify your account.",
+                description: `Welcome to Velora, ${user.name}!`,
             });
 
-            // Redirect to login after slight delay
-            setTimeout(() => navigate("/login"), 2000);
+            // Redirect to homepage
+            navigate("/");
 
         } catch (error: any) {
             if (axios.isAxiosError(error) && error.response?.status === 422) {

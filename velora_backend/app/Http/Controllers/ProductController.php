@@ -32,6 +32,24 @@ class ProductController extends BaseController
         return $this->success('Products retrieved successfully', \App\Http\Resources\ProductResource::collection($query->paginate(12))->response()->getData(true));
     }
 
+    /**
+     * Display a listing of the products for the authenticated vendor.
+     */
+    public function vendorIndex(Request $request)
+    {
+        $user = $request->user();
+        if (!$user->shop) {
+            return $this->error('Shop not found', 404);
+        }
+
+        $products = Product::where('shop_id', $user->shop->id)
+            ->with(['category'])
+            ->latest()
+            ->paginate(15);
+
+        return $this->success('Vendor products retrieved successfully', \App\Http\Resources\ProductResource::collection($products)->response()->getData(true));
+    }
+
     public function store(StoreProductRequest $request, \App\Services\ImageService $imageService)
     {
         $data = $request->validated();
