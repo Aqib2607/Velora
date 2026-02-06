@@ -3,8 +3,40 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Category } from "@/types";
 
-export function ProductFilters() {
+interface ProductFiltersProps {
+    minPrice: number;
+    maxPrice: number;
+    priceRange: [number, number];
+    setPriceRange: (range: [number, number]) => void;
+    categories: Category[];
+    selectedCategories: string[];
+    setSelectedCategories: (categories: string[]) => void;
+    rating: number | null;
+    setRating: (rating: number | null) => void;
+}
+
+export function ProductFilters({
+    minPrice = 0,
+    maxPrice = 1000,
+    priceRange,
+    setPriceRange,
+    categories,
+    selectedCategories,
+    setSelectedCategories,
+    rating,
+    setRating
+}: ProductFiltersProps) {
+
+    const handleCategoryChange = (categoryId: string) => {
+        if (selectedCategories.includes(categoryId)) {
+            setSelectedCategories(selectedCategories.filter(id => id !== categoryId));
+        } else {
+            setSelectedCategories([...selectedCategories, categoryId]);
+        }
+    };
+
     return (
         <Card className="glass-card h-fit sticky top-24">
             <CardHeader>
@@ -15,10 +47,18 @@ export function ProductFilters() {
                     <AccordionItem value="price">
                         <AccordionTrigger>Price Range</AccordionTrigger>
                         <AccordionContent className="pt-4 px-2">
-                            <Slider defaultValue={[0, 1000]} max={1000} step={10} className="mb-4" />
+                            <Slider
+                                defaultValue={[minPrice, maxPrice]}
+                                value={priceRange}
+                                max={maxPrice}
+                                step={10}
+                                min={minPrice}
+                                onValueChange={(value) => setPriceRange(value as [number, number])}
+                                className="mb-4"
+                            />
                             <div className="flex justify-between text-sm text-muted-foreground">
-                                <span>$0</span>
-                                <span>$1000+</span>
+                                <span>${priceRange[0]}</span>
+                                <span>${priceRange[1]}+</span>
                             </div>
                         </AccordionContent>
                     </AccordionItem>
@@ -26,10 +66,14 @@ export function ProductFilters() {
                     <AccordionItem value="categories">
                         <AccordionTrigger>Categories</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">
-                            {['Electronics', 'Fashion', 'Home', 'Beauty', 'Sports'].map((cat) => (
-                                <div key={cat} className="flex items-center space-x-2">
-                                    <Checkbox id={cat} />
-                                    <Label htmlFor={cat}>{cat}</Label>
+                            {categories.map((cat) => (
+                                <div key={cat.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`cat-${cat.id}`}
+                                        checked={selectedCategories.includes(String(cat.id))}
+                                        onCheckedChange={() => handleCategoryChange(String(cat.id))}
+                                    />
+                                    <Label htmlFor={`cat-${cat.id}`}>{cat.name}</Label>
                                 </div>
                             ))}
                         </AccordionContent>
@@ -38,11 +82,15 @@ export function ProductFilters() {
                     <AccordionItem value="rating">
                         <AccordionTrigger>Rating</AccordionTrigger>
                         <AccordionContent className="space-y-2 pt-2">
-                            {[5, 4, 3, 2, 1].map((rating) => (
-                                <div key={rating} className="flex items-center space-x-2">
-                                    <Checkbox id={`r-${rating}`} />
-                                    <Label htmlFor={`r-${rating}`} className="flex items-center gap-1">
-                                        {rating} <span className="text-yellow-400">★</span> & Up
+                            {[5, 4, 3, 2, 1].map((r) => (
+                                <div key={r} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`r-${r}`}
+                                        checked={rating === r}
+                                        onCheckedChange={(checked) => setRating(checked ? r : null)}
+                                    />
+                                    <Label htmlFor={`r-${r}`} className="flex items-center gap-1">
+                                        {r} <span className="text-yellow-400">★</span> & Up
                                     </Label>
                                 </div>
                             ))}

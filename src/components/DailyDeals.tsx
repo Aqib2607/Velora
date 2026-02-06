@@ -36,7 +36,7 @@ export function DailyDeals() {
                     </Link>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                     {flashDeals.map((deal, index) => (
                         <motion.div
                             key={deal.id}

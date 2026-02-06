@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
+import { AxiosError } from "axios";
 import {
     ChevronLeft, Loader2, Save, Trash2, Plus, Image as ImageIcon
 } from "lucide-react";
@@ -93,6 +94,8 @@ export default function ProductForm() {
                 setIsLoading(true);
                 try {
                     const res = await api.get(`/products/${id}`);
+                    // The backend likely returns { success: true, message: "...", data: { ... } }
+                    // So we access res.data.data
                     const p = res.data.data;
 
                     // Transform metadata object to array key-value for form
@@ -136,11 +139,12 @@ export default function ProductForm() {
                 toast({ title: "Created", description: "Product created successfully." });
             }
             navigate("/admin/products");
-        } catch (error: any) {
+        } catch (error) {
+            const err = error as AxiosError<{ message: string }>;
             toast({
                 variant: "destructive",
                 title: "Error",
-                description: error.response?.data?.message || "Failed to save product."
+                description: err.response?.data?.message || "Failed to save product."
             });
             // Handle validation errors manually if needed
         } finally {
@@ -235,7 +239,7 @@ export default function ProductForm() {
                                     <FormField control={form.control} name="status" render={({ field }) => (
                                         <FormItem>
                                             <FormLabel>Status</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                            <Select onValueChange={field.onChange} value={field.value}>
                                                 <FormControl>
                                                     <SelectTrigger>
                                                         <SelectValue placeholder="Select Status" />

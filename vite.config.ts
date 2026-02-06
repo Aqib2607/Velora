@@ -16,12 +16,12 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    target: "esnext", // Faster build, assumes modern browser
+    sourcemap: false, // Skip sourcemap generation for speed
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          vendor: ['react', 'react-dom', 'react-router-dom'],
-          ui: ['@radix-ui/react-accordion', '@radix-ui/react-dialog', '@radix-ui/react-dropdown-menu', 'lucide-react'],
-        },
+        // manualChunks removed to let Vite decide best splitting strategy
       },
     },
   },

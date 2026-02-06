@@ -56,6 +56,8 @@ const AdminLayout = React.lazy(() => import("./components/AdminLayout"));
 const AdminDashboard = React.lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminUsers = React.lazy(() => import("./pages/admin/AdminUsers"));
 const AdminCategories = React.lazy(() => import("./pages/admin/AdminCategories"));
+const AdminProducts = React.lazy(() => import("./pages/admin/ProductList"));
+const AdminProductForm = React.lazy(() => import("./pages/admin/ProductForm"));
 const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings"));
 
 // Loading Component
@@ -82,7 +84,13 @@ function AppLayout({ children }: { children: React.ReactNode }) {
       {children}
       <Footer />
       <MobileNav />
-      <AIChatbot />
+      <MobileNav />
+      {!location.pathname.startsWith("/admin") &&
+        !location.pathname.startsWith("/vendor") &&
+        !location.pathname.includes("dashboard") && (
+          <AIChatbot />
+        )}
+      <ScrollToTop />
       <ScrollToTop />
     </>
   );
@@ -140,7 +148,9 @@ const App = () => (
                         <Route path="/admin/dashboard" element={<AdminDashboard />} />
                         <Route path="/admin/users" element={<AdminUsers />} />
                         <Route path="/admin/categories" element={<AdminCategories />} />
-                        <Route path="/admin/products" element={<Products />} /> {/* Reuse Products page for now or build AdminProducts */}
+                        <Route path="/admin/products" element={<AdminProducts />} /> {/* Updated to use Admin List */}
+                        <Route path="/admin/products/new" element={<AdminProductForm />} />
+                        <Route path="/admin/products/:id/edit" element={<AdminProductForm />} />
                         <Route path="/admin/orders" element={<OrderList />} />
                         <Route path="/admin/settings" element={<AdminSettings />} />
                         <Route path="/admin/security" element={<SecurityPanel />} />

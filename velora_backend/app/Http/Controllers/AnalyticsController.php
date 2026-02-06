@@ -66,13 +66,52 @@ class AnalyticsController extends BaseController
         }
 
         $totalUsers = User::count();
-        $activeShops = Shop::where('status', 'active')->count(); // Assuming 'active' status
+        $totalOrders = Order::count();
+        $totalProducts = \App\Models\Product::count();
+        $activeShops = Shop::where('status', 'active')->count();
         $totalRevenue = Order::where('payment_status', 'paid')->sum('total_amount');
+
+        // Recent Activity (Combined Orders and New Users)
+        $recentOrders = Order::with('user')
+            ->latest()
+            ->take(5)
+            ->get()
+            ->map(function ($order) {
+                return [
+                    'type' => 'order',
+                    'title' => 'Order #' . $order->id . ' Placed',
+                    'description' => '$' . number_format($order->total_amount, 2) . ' • ' . $order->status,
+                    'time' => $order->created_at->diffForHumans(),
+                    'timestamp' => $order->created_at->timestamp,
+                ];
+            });
+
+        $recentUsers = User::latest()
+            ->take(5)
+            ->get()
+            ->map(function ($user) {
+                return [
+                    'type' => 'user',
+                    'title' => 'New User Registered',
+                    'description' => $user->name,
+                    'time' => $user->created_at->diffForHumans(),
+                    'timestamp' => $user->created_at->timestamp,
+                ];
+            });
+
+        // Merge and sort by timestamp desc, take top 10
+        $recentActivity = $recentOrders->concat($recentUsers)
+            ->sortByDesc('timestamp')
+            ->take(10)
+            ->values();
 
         return $this->success('Admin stats retrieved successfully', [
             'total_users' => $totalUsers,
+            'total_orders' => $totalOrders,
+            'total_products' => $totalProducts,
             'active_shops' => $activeShops,
             'total_revenue' => $totalRevenue,
+            'recent_activity' => $recentActivity,
         ]);
     }
 }

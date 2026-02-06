@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { AxiosError } from "axios";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Trash2,
@@ -64,15 +65,15 @@ export default function Checkout() {
         navigate("/orders");
         toast({ title: "Order Placed", description: "Your order has been placed successfully." });
       }
-
-    } catch (error: any) {
-      toast({ variant: "destructive", title: "Checkout Failed", description: error.response?.data?.message || "Error initiating checkout" });
+    } catch (error) {
+      const axiosError = error as AxiosError<{ message: string }>;
+      toast({ variant: "destructive", title: "Checkout Failed", description: axiosError.response?.data?.message || "Error initiating checkout" });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handlePaymentSuccess = async (paymentIntent: any) => {
+  const handlePaymentSuccess = async (paymentIntent: unknown) => {
     try {
       await api.post("/payment/success", { order_id: orderId });
       clearCart();
@@ -100,13 +101,23 @@ export default function Checkout() {
               ) : (
                 <div className="space-y-4">
                   {items.map(item => (
-                    <div key={item.id} className="flex gap-4">
+                    <div key={item.id} className="flex gap-4 items-center">
                       <img src={item.image} alt={item.name} className="w-16 h-16 rounded object-cover" />
                       <div className="flex-1">
-                        <h3 className="font-semibold">{item.name}</h3>
+                        <div className="flex justify-between items-start">
+                          <h3 className="font-semibold">{item.name}</h3>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => removeFromCart(item.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm">Qty: {item.quantity}</span>
-                          <span className="font-bold">${item.price}</span>
+                          <span className="font-bold">${Number(item.price).toFixed(2)}</span>
                         </div>
                       </div>
                     </div>

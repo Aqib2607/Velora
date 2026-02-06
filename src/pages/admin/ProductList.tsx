@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
     Plus, Search, Filter, MoreHorizontal, Edit, Trash2,
@@ -37,7 +37,7 @@ interface Product {
     stock_quantity: number;
     status: string;
     category: { name: string };
-    images: string[];
+    image_urls: string[];
 }
 
 interface PaginationMeta {
@@ -57,33 +57,33 @@ export default function ProductList() {
     const { toast } = useToast();
     const navigate = useNavigate();
 
-    const fetchProducts = async () => {
+    const fetchProducts = useCallback(async () => {
         setIsLoading(true);
         try {
             const params = {
                 page: searchParams.get("page") || 1,
                 "filter[search]": searchParams.get("search") || "",
-                "filter[status]": searchParams.get("status") || "published", // Default to published or all? Let's default to empty/all if not set, or specific if needed.
+                "filter[status]": searchParams.get("status") || "", // Default to all (empty string)
                 sort: searchParams.get("sort") || "-created_at",
             };
 
-            // Adjust backend to accept 'all' or empty for status if we want to see everything
-            // If the controller filters by 'published' by default, we need to override or change controller.
-            // My controller update removed the hardcoded 'published' check in index, so it should be fine.
-
-            const response = await api.get("/products", { params });
-            setProducts(response.data.data);
-            setMeta(response.data.meta);
+            const response = await api.get("/admin/products", { params });
+            setProducts(response.data.data.data);
+            setMeta(response.data.data.meta); // Meta is probably in nested, or alongside data? 
+            // If it's a paginated resource response it's:
+            // { data: [...], meta: {...}, links: {...} } inside the 'data' key of ApiResponse
+            // So response.data.data.meta is correct for meta.
+            // response.data.data.data is correct for products.
         } catch (error) {
             toast({ variant: "destructive", title: "Error", description: "Failed to fetch products." });
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [searchParams, toast]);
 
     useEffect(() => {
         fetchProducts();
-    }, [searchParams]);
+    }, [fetchProducts]);
 
     const handleSearch = (term: string) => {
         const params = new URLSearchParams(searchParams);
@@ -169,7 +169,7 @@ export default function ProductList() {
                     />
                 </div>
                 <Select
-                    defaultValue={searchParams.get("status") || "all"}
+                    value={searchParams.get("status") || "all"}
                     onValueChange={handleStatusFilter}
                 >
                     <SelectTrigger className="w-[180px]">
@@ -183,7 +183,7 @@ export default function ProductList() {
                     </SelectContent>
                 </Select>
                 <Select
-                    defaultValue={searchParams.get("sort") || "-created_at"}
+                    value={searchParams.get("sort") || "-created_at"}
                     onValueChange={handleSort}
                 >
                     <SelectTrigger className="w-[180px]">
@@ -230,8 +230,8 @@ export default function ProductList() {
                                 <TableRow key={product.id}>
                                     <TableCell>
                                         <div className="h-10 w-10 rounded bg-muted flex items-center justify-center overflow-hidden">
-                                            {product.images?.[0] ? (
-                                                <img src={product.images[0]} alt="" className="h-full w-full object-cover" />
+                                            {product.image_urls?.[0] ? (
+                                                <img src={product.image_urls[0]} alt="" className="h-full w-full object-cover" />
                                             ) : (
                                                 <ImageIcon className="h-5 w-5 text-muted-foreground" />
                                             )}

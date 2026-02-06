@@ -74,10 +74,8 @@ Route::prefix('v1')->group(function () {
         Route::post('/checkout/init', [\App\Http\Controllers\CheckoutController::class, 'init']);
         Route::post('/payment/success', [\App\Http\Controllers\CheckoutController::class, 'paymentSuccess']);
 
-        // Orders
+        // Orders (Moved to bottom to allow Admin routes priority)
         Route::get('/orders', [\App\Http\Controllers\OrderController::class, 'index']);
-        Route::get('/orders/{id}', [\App\Http\Controllers\OrderController::class, 'show']);
-        Route::get('/orders/{id}/invoice', [\App\Http\Controllers\OrderController::class, 'invoice']);
 
         // Wishlist
         Route::get('/wishlist', [\App\Http\Controllers\WishlistController::class, 'index']);
@@ -97,30 +95,62 @@ Route::prefix('v1')->group(function () {
             Route::post('/shop/register', [\App\Http\Controllers\ShopController::class, 'store']);
             Route::get('/shop/me', [\App\Http\Controllers\ShopController::class, 'me']);
             Route::put('/shop/me', [\App\Http\Controllers\ShopController::class, 'update']);
-            Route::get('/vendor/dashboard', [\App\Http\Controllers\ShopController::class, 'dashboard']); // Dashboard stats
-            
-            Route::get('/vendor/products', [\App\Http\Controllers\ProductController::class, 'vendorIndex']); // List vendor products
+            Route::get('/vendor/dashboard', [\App\Http\Controllers\ShopController::class, 'dashboard']);
+
+            Route::get('/vendor/products', [\App\Http\Controllers\ProductController::class, 'vendorIndex']);
             Route::post('/products', [\App\Http\Controllers\ProductController::class, 'store']);
             Route::put('/products/{id}', [\App\Http\Controllers\ProductController::class, 'update']);
             Route::delete('/products/{id}', [\App\Http\Controllers\ProductController::class, 'destroy']);
             Route::post('/products/{id}/restore', [\App\Http\Controllers\ProductController::class, 'restore']);
-            
+
             Route::get('/vendor/orders', [\App\Http\Controllers\OrderController::class, 'vendorOrders']);
-            Route::patch('/vendor/orders/items/{id}/status', [\App\Http\Controllers\OrderController::class, 'updateItemStatus']); // Update item status
+            Route::patch('/vendor/orders/items/{id}/status', [\App\Http\Controllers\OrderController::class, 'updateItemStatus']);
+
+            // Vendor Coupons
+            Route::get('/vendor/coupons', [\App\Http\Controllers\CouponController::class, 'vendorIndex']);
+            Route::post('/coupons', [\App\Http\Controllers\CouponController::class, 'store']);
+            Route::delete('/coupons/{coupon}', [\App\Http\Controllers\CouponController::class, 'destroy']);
         });
 
         // Admin Routes
         Route::middleware('role:admin')->group(function () {
+            // User Management
             Route::get('/admin/users', [\App\Http\Controllers\AdminController::class, 'index']);
+            Route::get('/admin/users/{id}', [\App\Http\Controllers\AdminController::class, 'show']);
+            Route::put('/admin/users/{id}', [\App\Http\Controllers\AdminController::class, 'update']);
+            Route::delete('/admin/users/{id}', [\App\Http\Controllers\AdminController::class, 'destroy']);
+
+            // Shop Management
+            Route::get('/admin/shops', [\App\Http\Controllers\AdminController::class, 'shopsIndex']);
+            Route::patch('/admin/shops/{id}/approve', [\App\Http\Controllers\AdminController::class, 'approveShop']);
+            Route::patch('/admin/shops/{id}/suspend', [\App\Http\Controllers\AdminController::class, 'suspendShop']);
+
+            // Global/Admin Categories
             Route::post('/categories', [\App\Http\Controllers\CategoryController::class, 'store']);
             Route::put('/categories/{id}', [\App\Http\Controllers\CategoryController::class, 'update']);
             Route::delete('/categories/{id}', [\App\Http\Controllers\CategoryController::class, 'destroy']);
+
+            // Analytics
             Route::get('/admin/stats', [\App\Http\Controllers\AnalyticsController::class, 'adminStats']);
-            Route::patch('/orders/{id}/status', [\App\Http\Controllers\OrderController::class, 'updateStatus']);
-            Route::get('/admin/stats', [\App\Http\Controllers\AnalyticsController::class, 'adminStats']);
+
+            // Orders
             Route::patch('/orders/{id}/status', [\App\Http\Controllers\OrderController::class, 'updateStatus']);
             Route::get('/orders/export', [\App\Http\Controllers\OrderController::class, 'export']);
             Route::get('/orders/admin', [\App\Http\Controllers\OrderController::class, 'adminOrders']);
+
+            // Start Admin Products
+            Route::get('/admin/products', [\App\Http\Controllers\ProductController::class, 'adminIndex']);
+            // End Admin Products
+
+            // Global Settings
+            Route::get('/admin/settings', [\App\Http\Controllers\SettingController::class, 'index']);
+            Route::put('/admin/settings', [\App\Http\Controllers\SettingController::class, 'update']);
+
+            // Admin Coupons
+            Route::get('/admin/coupons', [\App\Http\Controllers\CouponController::class, 'adminIndex']);
+            Route::apiResource('coupons', \App\Http\Controllers\CouponController::class)->except(['index', 'store', 'destroy', 'show']);
+            // Note: Admin uses same store/destroy as generic but might need specific route handling if we want pure admin overrides without checks. 
+            // However, CouponController@destroy allows admin deletion. CouponController@store enables admin to create.
         });
 
         // Common Upload Route
@@ -136,12 +166,13 @@ Route::prefix('v1')->group(function () {
         // Manage Contact Messages (Admin)
         Route::get('/contact/messages', [\App\Http\Controllers\ContactController::class, 'index']);
 
-        // Manage Coupons (Admin - excluding index which is public)
-        Route::apiResource('coupons', \App\Http\Controllers\CouponController::class)->except(['index']);
-
         // Broadcasting Auth (Manual override if default doesn't work or for custom path)
         Route::post('/broadcasting/auth', function (Illuminate\Http\Request $request) {
             return Illuminate\Support\Facades\Broadcast::auth($request);
         });
+
+        // Generic Order Routes (Must be after Admin/Vendor specific routes to avoid wildcard shadowing)
+        Route::get('/orders/{id}', [\App\Http\Controllers\OrderController::class, 'show']);
+        Route::get('/orders/{id}/invoice', [\App\Http\Controllers\OrderController::class, 'invoice']);
     });
 });

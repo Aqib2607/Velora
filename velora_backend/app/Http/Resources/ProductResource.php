@@ -20,9 +20,12 @@ class ProductResource extends JsonResource
             'name' => $this->name,
             'description' => $this->description,
             'price' => (float) $this->price,
+            'original_price' => $this->original_price ? (float) $this->original_price : null,
             'stock_quantity' => (int) $this->stock_quantity,
             'status' => $this->status,
             'is_featured' => (bool) $this->is_featured,
+            'colors' => $this->colors ?? [],
+            'sizes' => $this->sizes ?? [],
             'image_urls' => $this->images ?? [],
             'category' => [
                 'id' => $this->category->id,
@@ -36,6 +39,8 @@ class ProductResource extends JsonResource
                 'logo_url' => $this->shop->logo_url,
             ],
             'created_at' => $this->created_at->format('d M Y'),
+            'rating' => round($this->reviews_avg_rating, 1) ?? 0,
+            'reviews' => $this->reviews_count ?? 0,
         ];
 
         // Check if user is logged in for wishlist status

@@ -1,86 +1,41 @@
+
 import { motion } from "framer-motion";
 import { ProductCard } from "./ProductCard";
-
-const products = [
-  {
-    id: 1,
-    name: "Premium Wireless Headphones Pro Max",
-    price: 299.99,
-    originalPrice: 399.99,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    rating: 4.8,
-    reviews: 2453,
-  },
-  {
-    id: 2,
-    name: "Smart Watch Ultra Series 9",
-    price: 449.00,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 1832,
-  },
-  {
-    id: 3,
-    name: "Designer Leather Backpack",
-    price: 189.99,
-    originalPrice: 249.99,
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 956,
-  },
-  {
-    id: 4,
-    name: "Premium Running Shoes Air Max",
-    price: 179.00,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop",
-    rating: 4.6,
-    reviews: 3241,
-  },
-  {
-    id: 5,
-    name: "Minimalist Ceramic Vase Set",
-    price: 89.99,
-    image: "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=500&h=500&fit=crop",
-    rating: 4.5,
-    reviews: 428,
-  },
-  {
-    id: 6,
-    name: "Professional Camera Lens 50mm",
-    price: 599.00,
-    originalPrice: 749.00,
-    image: "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=500&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 1567,
-  },
-  {
-    id: 7,
-    name: "Ergonomic Office Chair Pro",
-    price: 399.00,
-    image: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=500&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 892,
-  },
-  {
-    id: 8,
-    name: "Portable Bluetooth Speaker",
-    price: 129.99,
-    originalPrice: 169.99,
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&h=500&fit=crop",
-    rating: 4.4,
-    reviews: 2103,
-  },
-];
-
+import { useEffect, useState } from "react";
+import api from "@/lib/axios";
+import { Product } from "@/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface ProductGridProps {
-  products?: typeof products;
+  products?: Product[];
   isLoading?: boolean;
 }
 
-export function ProductGrid({ products: propProducts, isLoading = false }: ProductGridProps) {
-  const displayProducts = propProducts || products;
+export function ProductGrid({ products: propProducts, isLoading: propIsLoading = false }: ProductGridProps) {
+  const [fetchedProducts, setFetchedProducts] = useState<Product[]>([]);
+  const [internalLoading, setInternalLoading] = useState(true);
+
+  useEffect(() => {
+    if (!propProducts) {
+      // Fetch featured products if not provided
+      const fetchFeatured = async () => {
+        try {
+          const res = await api.get('/products/featured');
+          setFetchedProducts(res.data.data);
+        } catch (error) {
+          console.error("Failed to fetch featured products", error);
+        } finally {
+          setInternalLoading(false);
+        }
+      };
+      fetchFeatured();
+    } else {
+      setInternalLoading(false);
+    }
+  }, [propProducts]);
+
+  const displayProducts = propProducts || fetchedProducts;
+  const isLoading = propProducts ? propIsLoading : internalLoading;
 
   return (
     <section className="py-20 px-4">
@@ -99,7 +54,7 @@ export function ProductGrid({ products: propProducts, isLoading = false }: Produ
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
           {isLoading ? (
             Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex flex-col space-y-3">
@@ -119,7 +74,11 @@ export function ProductGrid({ products: propProducts, isLoading = false }: Produ
                 viewport={{ once: true }}
                 transition={{ delay: index * 0.1 }}
               >
-                <ProductCard {...product} />
+                <ProductCard
+                  {...product}
+                  image={product.image_urls?.[0] || ""}
+                  price={Number(product.price)}
+                />
               </motion.div>
             ))
           )}

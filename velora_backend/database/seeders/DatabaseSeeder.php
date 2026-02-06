@@ -11,6 +11,7 @@ use App\Models\Shop;
 use App\Models\User;
 use App\Models\Wishlist;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
@@ -19,57 +20,57 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Create Users (5 Customers, 5 Vendors, 1 Admin)
-        $customers = User::factory(5)->create(['role' => 'customer']);
-        $vendors = User::factory(5)->create(['role' => 'shop_owner']);
-        $admin = User::factory()->create(['name' => 'Admin', 'email' => 'admin@velora.com', 'role' => 'admin']);
+        // Clear tables first to avoid duplicates if re-seeding
+        // User::truncate(); // Be careful with foreign keys, better to refresh db if needed. 
+        // We'll rely on factories creating new data.
 
-        // 2. Create Shops (1 per Vendor)
+        // 1. Categories (Ensure they exist)
+        $this->call(CategorySeeder::class);
+        $categories = Category::all();
+
+        // 2. Admin User
+        User::factory()->create([
+            'name' => 'Admin User',
+            'email' => 'admin@velora.com',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+        ]);
+
+        // 3. 10 Random Users (Customers)
+        $customers = User::factory(10)->create(['role' => 'customer']);
+
+        // 4. 20 Vendors (Shop Owners)
+        $vendors = User::factory(20)->create(['role' => 'shop_owner']);
+
+        // 5. 20 Shops (1 per Vendor)
         $shops = collect();
         foreach ($vendors as $vendor) {
-            $shops->push(Shop::factory()->create(['user_id' => $vendor->id]));
+            $shop = Shop::factory()->create([
+                'user_id' => $vendor->id,
+                'name' => $vendor->name . "'s Shop",
+                'is_verified' => true,
+                'status' => 'active'
+            ]);
+            $shops->push($shop);
         }
 
-        // 3. Create Categories (5)
-        $categories = Category::factory(5)->create();
-
-        // 4. Create Products (5 per Shop)
-        $products = collect();
+        // 6. 100 Products (Distributed among shops)
+        // 20 shops * 5 products = 100 products
         foreach ($shops as $shop) {
-            // Pick random category
-            $productsForShop = Product::factory(5)->create([
+            Product::factory(5)->create([
                 'shop_id' => $shop->id,
                 'category_id' => $categories->random()->id,
             ]);
-            $products = $products->merge($productsForShop);
         }
 
-        // 5. Create Reviews (5 total, random users/products)
-        Review::factory(5)->create([
-            'user_id' => fn () => $customers->random()->id,
-            'product_id' => fn () => $products->random()->id,
-        ]);
+        $allProducts = Product::all();
 
-        // 6. Create Wishlists (5 total)
-        // Ensure uniqueness manually or via factory logic, here simple loop
-        for ($i = 0; $i < 5; $i++) {
-            Wishlist::firstOrCreate([
-                'user_id' => $customers->random()->id,
-                'product_id' => $products->random()->id,
-            ]);
-        }
-
-        // 7. Create Orders (5 total)
-        $orders = Order::factory(5)->create([
-            'user_id' => fn () => $customers->random()->id,
-        ]);
-
-        // 8. Create Order Items (5 per Order)
-        foreach ($orders as $order) {
-            OrderItem::factory(5)->create([
-                'order_id' => $order->id,
-                'shop_id' => fn () => $shops->random()->id,
-                'product_id' => fn () => $products->random()->id,
+        // 7. Extra Data: Reviews, Wishlists, Orders (Optional but good for completeness)
+        // Create some reviews
+        if ($customers->count() > 0 && $allProducts->count() > 0) {
+            Review::factory(20)->create([
+                'user_id' => fn() => $customers->random()->id,
+                'product_id' => fn() => $allProducts->random()->id,
             ]);
         }
     }

@@ -17,19 +17,27 @@ class ProductController extends BaseController
     public function index(Request $request)
     {
         $query = Product::with(['category', 'shop'])
+            ->withCount('reviews')
+            ->withAvg('reviews', 'rating')
+            ->where('status', 'published') // Ensure public index only shows published
             ->search($request->input('filter.search'))
-            ->filter($request->only(['status', 'category_id', 'min_price', 'max_price'])) // Assuming scopeFilter handles this array structure or I need to map it.
-            // scopeFilter in model expects array. $request->only returns array.
-            // But strict 'filter.status' might need mapping.
-            // The model scope uses $filters['status'].
-            // If frontend sends ?status=..., $request->only('status') works.
-            // If frontend sends ?filter[status]=..., then $request->input('filter') works.
-            // I'll stick to flat params for simplicity or map `filter` array.
-            // Let's use $request->all() or specific keys.
             ->filter($request->all())
             ->sort($request->sort, $request->direction);
 
         return $this->success('Products retrieved successfully', \App\Http\Resources\ProductResource::collection($query->paginate(12))->response()->getData(true));
+    }
+
+    /**
+     * Display a listing of the products for admin (All statuses).
+     */
+    public function adminIndex(Request $request)
+    {
+        $query = Product::with(['category', 'shop'])
+            ->search($request->input('filter.search'))
+            ->filter($request->all()) // Reuse filter scope which handles status if passed
+            ->sort($request->sort, $request->direction);
+
+        return $this->success('Admin products retrieved successfully', \App\Http\Resources\ProductResource::collection($query->paginate(20))->response()->getData(true));
     }
 
     /**
@@ -73,7 +81,7 @@ class ProductController extends BaseController
             'shop_id' => $user->shop->id,
             'category_id' => $data['category_id'],
             'name' => $data['name'],
-            'slug' => \Illuminate\Support\Str::slug($data['name']).'-'.\Illuminate\Support\Str::random(6),
+            'slug' => \Illuminate\Support\Str::slug($data['name']) . '-' . \Illuminate\Support\Str::random(6),
             'description' => $data['description'] ?? '',
             'price' => $data['price'],
             'stock_quantity' => $data['stock_quantity'],

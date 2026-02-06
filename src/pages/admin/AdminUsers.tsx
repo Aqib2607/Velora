@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Search, MoreVertical, Trash2, Shield, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -10,7 +10,16 @@ import api from "@/lib/axios";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function AdminUsers() {
-    const [users, setUsers] = useState([]);
+    interface User {
+        id: number;
+        name: string;
+        email: string;
+        role: string;
+        status?: string;
+        created_at?: string;
+    }
+
+    const [users, setUsers] = useState<User[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const { toast } = useToast();
 
@@ -22,21 +31,32 @@ export default function AdminUsers() {
     // Actually, I should create the backend endpoint for this.
     // Let's assume we will build it. 
 
-    useEffect(() => {
-        // Mock data for now to show UI structure as backend part requires Controller update
-        setUsers([
-            { id: 1, name: "Admin User", email: "admin@velora.com", role: "admin", status: "active" },
-            { id: 2, name: "John Doe", email: "john@example.com", role: "customer", status: "active" },
-            { id: 3, name: "Jane Smith", email: "jane@store.com", role: "shop_owner", status: "active" },
-        ]);
-        setIsLoading(false);
-    }, []);
+    const fetchUsers = useCallback(async () => {
+        setIsLoading(true);
+        try {
+            const response = await api.get('/admin/users');
+            setUsers(response.data.data.data); // Pagination wrapper usually has data.data
+        } catch (error) {
+            console.error("Failed to fetch users", error);
+            toast({ variant: "destructive", title: "Error", description: "Failed to fetch users." });
+        } finally {
+            setIsLoading(false);
+        }
+    }, [toast]);
 
-    const handleDelete = (id: number) => {
+    useEffect(() => {
+        fetchUsers();
+    }, [fetchUsers]);
+
+    const handleDelete = async (id: number) => {
         if (confirm("Are you sure you want to delete this user?")) {
-            // api.delete(/admin/users/${id})
-            toast({ title: "User deleted", description: "This is a UI demo." });
-            setUsers(users.filter((u: any) => u.id !== id));
+            try {
+                await api.delete(`/admin/users/${id}`);
+                setUsers(users.filter((u) => u.id !== id));
+                toast({ title: "User deleted", description: "User has been removed successfully." });
+            } catch (error) {
+                toast({ variant: "destructive", title: "Error", description: "Failed to delete user." });
+            }
         }
     };
 
@@ -63,7 +83,7 @@ export default function AdminUsers() {
                             </TableRow>
                         </TableHeader>
                         <TableBody>
-                            {users.map((user: any) => (
+                            {users.map((user) => (
                                 <TableRow key={user.id}>
                                     <TableCell className="font-medium">
                                         <div className="flex items-center gap-2">
@@ -81,7 +101,7 @@ export default function AdminUsers() {
                                     </TableCell>
                                     <TableCell>
                                         <Badge variant="outline" className="text-green-600 border-green-200 bg-green-50">
-                                            {user.status}
+                                            {user.status || 'Active'}
                                         </Badge>
                                     </TableCell>
                                     <TableCell className="text-right">
@@ -92,7 +112,7 @@ export default function AdminUsers() {
                                                 </Button>
                                             </DropdownMenuTrigger>
                                             <DropdownMenuContent align="end">
-                                                <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(user.id)}>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDelete(user.id)}>
                                                     <Trash2 className="h-4 w-4 mr-2" /> Delete
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>

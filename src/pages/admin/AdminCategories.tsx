@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Plus, Edit2, Trash2, ChevronRight, ChevronDown, Layers } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -57,16 +57,20 @@ const CategoryItem = ({ category, level = 0 }: { category: Category, level?: num
     );
 };
 
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
 export default function AdminCategories() {
     const [categories, setCategories] = useState<Category[]>([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [isAddOpen, setIsAddOpen] = useState(false);
+    const [newCategoryName, setNewCategoryName] = useState("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const { toast } = useToast();
 
-    useEffect(() => {
-        fetchCategories();
-    }, []);
-
-    const fetchCategories = async () => {
+    const fetchCategories = useCallback(async () => {
+        setIsLoading(true);
         try {
             const res = await api.get("/categories");
             setCategories(res.data.data);
@@ -80,6 +84,32 @@ export default function AdminCategories() {
         } finally {
             setIsLoading(false);
         }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchCategories();
+    }, [fetchCategories]);
+
+    const handleAddCategory = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!newCategoryName.trim()) return;
+
+        setIsSubmitting(true);
+        try {
+            await api.post("/categories", { name: newCategoryName });
+            toast({ title: "Success", description: "Category created successfully" });
+            setNewCategoryName("");
+            setIsAddOpen(false);
+            fetchCategories();
+        } catch (error) {
+            toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: 'Failed to create category'
+            });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -89,9 +119,36 @@ export default function AdminCategories() {
                     <h1 className="text-2xl font-bold">Categories</h1>
                     <p className="text-muted-foreground">Manage product categories and hierarchy</p>
                 </div>
-                <Button className="gradient-bg">
-                    <Plus className="h-4 w-4 mr-2" /> Add Category
-                </Button>
+
+                <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
+                    <DialogTrigger asChild>
+                        <Button className="gradient-bg">
+                            <Plus className="h-4 w-4 mr-2" /> Add Category
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent>
+                        <DialogHeader>
+                            <DialogTitle>Add New Category</DialogTitle>
+                        </DialogHeader>
+                        <form onSubmit={handleAddCategory} className="space-y-4">
+                            <div className="space-y-2">
+                                <Label htmlFor="name">Category Name</Label>
+                                <Input
+                                    id="name"
+                                    placeholder="e.g. Electronics"
+                                    value={newCategoryName}
+                                    onChange={(e) => setNewCategoryName(e.target.value)}
+                                />
+                            </div>
+                            <div className="flex justify-end gap-2">
+                                <Button type="button" variant="ghost" onClick={() => setIsAddOpen(false)}>Cancel</Button>
+                                <Button type="submit" disabled={isSubmitting}>
+                                    {isSubmitting ? "Creating..." : "Create Category"}
+                                </Button>
+                            </div>
+                        </form>
+                    </DialogContent>
+                </Dialog>
             </div>
 
             <Card className="glass-card">
@@ -110,6 +167,9 @@ export default function AdminCategories() {
                                 {categories.map((category) => (
                                     <CategoryItem key={category.id} category={category} />
                                 ))}
+                                {categories.length === 0 && (
+                                    <div className="p-4 text-center text-muted-foreground">No categories found. Add one to get started.</div>
+                                )}
                             </div>
                         </Collapsible>
                     )}

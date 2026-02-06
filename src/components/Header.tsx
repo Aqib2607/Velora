@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ShoppingCart, User, Search, Menu, LogIn, LogOut, LayoutDashboard, ShoppingBag, Settings, Store } from "lucide-react";
+import { ShoppingCart, User as UserIcon, Search, Menu, LogIn, LogOut, LayoutDashboard, ShoppingBag, Settings, Store } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetClose } from "@/components/ui/sheet";
@@ -22,21 +22,23 @@ const navLinks = [
   { href: "/products", label: "Products" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
-  { href: "/checkout", label: "Cart" },
 ];
+
+import { User } from "@/types";
+
+// ...
 
 export function Header() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { cartCount } = useCart();
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const checkAuth = () => {
       const userStr = localStorage.getItem("user");
       if (userStr) {
-        setUser(JSON.parse(userStr));
+        setUser(JSON.parse(userStr) as User);
       } else {
         setUser(null);
       }
@@ -126,32 +128,7 @@ export function Header() {
 
         {/* Actions */}
         <div className="flex items-center gap-2">
-          {/* Search */}
-          <motion.div
-            initial={false}
-            animate={{ width: isSearchOpen ? 200 : 40 }}
-            className="relative"
-          >
-            {isSearchOpen && (
-              <motion.input
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                type="text"
-                placeholder="Search..."
-                className="w-full h-10 pl-10 pr-4 rounded-full bg-secondary/50 border border-border text-sm focus:outline-none focus:ring-2 focus:ring-primary"
-                autoFocus
-                onBlur={() => setIsSearchOpen(false)}
-              />
-            )}
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => setIsSearchOpen(!isSearchOpen)}
-              className={`h-10 w-10 rounded-full ${isSearchOpen ? "absolute left-0 top-0" : ""}`}
-            >
-              <Search className="h-5 w-5" />
-            </Button>
-          </motion.div>
+
 
           <ThemeToggle />
 
@@ -172,7 +149,7 @@ export function Header() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full" title="Account">
-                  <User className="h-5 w-5" />
+                  <UserIcon className="h-5 w-5" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
@@ -188,7 +165,7 @@ export function Header() {
                   Dashboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate('/profile')}>
-                  <User className="mr-2 h-4 w-4" />
+                  <UserIcon className="mr-2 h-4 w-4" />
                   Profile
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => navigate(getOrdersLink())}>

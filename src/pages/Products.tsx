@@ -1,155 +1,117 @@
 import { motion } from "framer-motion";
 import { ProductCard } from "@/components/ProductCard";
-import { Filter, SlidersHorizontal, ChevronDown } from "lucide-react";
+import { Filter, SlidersHorizontal, ChevronDown, Search as SearchIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-
-const allProducts = [
-  {
-    id: 1,
-    name: "Premium Wireless Headphones Pro Max",
-    price: 299.99,
-    originalPrice: 399.99,
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&h=500&fit=crop",
-    rating: 4.8,
-    reviews: 2453,
-    category: "Electronics",
-  },
-  {
-    id: 2,
-    name: "Smart Watch Ultra Series 9",
-    price: 449.00,
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 1832,
-    category: "Electronics",
-  },
-  {
-    id: 3,
-    name: "Designer Leather Backpack",
-    price: 189.99,
-    originalPrice: 249.99,
-    image: "https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=500&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 956,
-    category: "Fashion",
-  },
-  {
-    id: 4,
-    name: "Premium Running Shoes Air Max",
-    price: 179.00,
-    image: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&h=500&fit=crop",
-    rating: 4.6,
-    reviews: 3241,
-    category: "Fashion",
-  },
-  {
-    id: 5,
-    name: "Minimalist Ceramic Vase Set",
-    price: 89.99,
-    image: "https://images.unsplash.com/photo-1578500494198-246f612d3b3d?w=500&h=500&fit=crop",
-    rating: 4.5,
-    reviews: 428,
-    category: "Home",
-  },
-  {
-    id: 6,
-    name: "Professional Camera Lens 50mm",
-    price: 599.00,
-    originalPrice: 749.00,
-    image: "https://images.unsplash.com/photo-1617005082133-548c4dd27f35?w=500&h=500&fit=crop",
-    rating: 4.9,
-    reviews: 1567,
-    category: "Electronics",
-  },
-  {
-    id: 7,
-    name: "Ergonomic Office Chair Pro",
-    price: 399.00,
-    image: "https://images.unsplash.com/photo-1580480055273-228ff5388ef8?w=500&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 892,
-    category: "Home",
-  },
-  {
-    id: 8,
-    name: "Portable Bluetooth Speaker",
-    price: 129.99,
-    originalPrice: 169.99,
-    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=500&h=500&fit=crop",
-    rating: 4.4,
-    reviews: 2103,
-    category: "Electronics",
-  },
-  {
-    id: 9,
-    name: "Vintage Leather Wallet",
-    price: 79.99,
-    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=500&h=500&fit=crop",
-    rating: 4.6,
-    reviews: 734,
-    category: "Fashion",
-  },
-  {
-    id: 10,
-    name: "Smart Home Security Camera",
-    price: 149.00,
-    originalPrice: 199.00,
-    image: "https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=500&h=500&fit=crop",
-    rating: 4.5,
-    reviews: 1289,
-    category: "Electronics",
-  },
-  {
-    id: 11,
-    name: "Organic Cotton T-Shirt",
-    price: 39.99,
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500&h=500&fit=crop",
-    rating: 4.3,
-    reviews: 567,
-    category: "Fashion",
-  },
-  {
-    id: 12,
-    name: "Modern Desk Lamp",
-    price: 69.99,
-    image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?w=500&h=500&fit=crop",
-    rating: 4.7,
-    reviews: 823,
-    category: "Home",
-  },
-];
-
-const categories = ["All", "Electronics", "Fashion", "Home"];
-const sortOptions = ["Featured", "Price: Low to High", "Price: High to Low", "Rating"];
-
+import { Input } from "@/components/ui/input";
+import { useState, useEffect, useCallback } from "react";
+import { useDebounce } from "../hooks/use-debounce"; // Using relative path to be safer if alias fails
+import api from "@/lib/axios";
 import { InfiniteScroll } from "@/components/InfiniteScroll";
 import { ProductFilters } from "@/components/ProductFilters";
 import { AnimatePresence } from "framer-motion";
+import { Product, Category } from "@/types";
+
+const categories = ["All", "Electronics", "Fashion", "Home"];
 
 export default function Products() {
-  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedCategory, setSelectedCategory] = useState("All"); // Keep for Quick Filter (Chips) behavior logic if needed, or sync with sidebar
+  const [categories, setCategories] = useState<Category[]>([]);
   const [showFilters, setShowFilters] = useState(false);
-  const [displayedProducts, setDisplayedProducts] = useState(allProducts.slice(0, 8));
+  const [products, setProducts] = useState<Product[]>([]);
+  const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  // Filter products based on category (mock logic)
-  const filteredProducts = selectedCategory === "All"
-    ? allProducts
-    : allProducts.filter(p => p.category === selectedCategory);
+  // Filters State
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 2000]);
+  const [filterCategories, setFilterCategories] = useState<string[]>([]);
+  const [rating, setRating] = useState<number | null>(null);
+
+  const debouncedSearch = useDebounce(searchQuery, 500);
+  const debouncedPrice = useDebounce(priceRange, 500); // Debounce price to avoid too many calls
+
+  // Fetch Categories
+  useEffect(() => {
+    api.get("/categories").then(res => {
+      setCategories(res.data.data);
+    }).catch(err => console.error("Failed to fetch categories", err));
+  }, []);
+
+  const fetchProducts = useCallback(async (reset = false) => {
+    setIsLoading(true);
+    try {
+      const currentPage = reset ? 1 : page;
+      const params: Record<string, string | number> = { page: currentPage };
+
+      // Search
+      if (debouncedSearch) {
+        params['filter[search]'] = debouncedSearch;
+      }
+
+      // Categories
+      // Check if "All" is selected in chips -> ignore.
+      // If chips has a specific category, use it.
+      // If Sidebar has categories, use them.
+      // Priority: Sidebar (more specific) > Chips. Or sync them?
+      // Let's treat valid Chip selection as one of the filterCategories.
+
+      let catsToSend = [...filterCategories];
+      if (selectedCategory !== "All") {
+        // Find ID of selectedCategory name? The chips are currently Names.
+        // We need to map Name -> ID.
+        const catObj = categories.find(c => c.name === selectedCategory);
+        if (catObj && !catsToSend.includes(String(catObj.id))) {
+          catsToSend = [String(catObj.id)]; // Quick filter overrides/sets single
+        }
+      }
+
+      if (catsToSend.length > 0) {
+        params['filter[category_id]'] = catsToSend.join(',');
+      }
+
+      // Price
+      params['filter[min_price]'] = debouncedPrice[0];
+      params['filter[max_price]'] = debouncedPrice[1];
+
+      // Rating
+      if (rating) {
+        params['filter[rating]'] = rating;
+      }
+
+      const res = await api.get("/products", { params });
+
+      const newProducts = res.data.data.data;
+      const meta = res.data.data.meta;
+
+      if (reset) {
+        setProducts(newProducts);
+        setPage(2);
+      } else {
+        setProducts(prev => [...prev, ...newProducts]);
+        setPage(prev => prev + 1);
+      }
+
+      setHasMore(currentPage < meta.last_page);
+      setTotalProducts(meta.total);
+
+    } catch (error) {
+      console.error("Failed to fetch products", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [selectedCategory, debouncedSearch, page, filterCategories, debouncedPrice, rating, categories]);
+
+  // Initial fetch and category change
+  useEffect(() => {
+    fetchProducts(true);
+  }, [selectedCategory, debouncedSearch, filterCategories, debouncedPrice, rating, fetchProducts]); // Added dependencies
 
   const handleLoadMore = () => {
-    setIsLoadingMore(true);
-    // Simulate API delay
-    setTimeout(() => {
-      setDisplayedProducts((prev) => {
-        const next = filteredProducts.slice(0, prev.length + 4);
-        if (next.length >= filteredProducts.length) setHasMore(false);
-        return next;
-      });
-      setIsLoadingMore(false);
-    }, 1000);
+    if (!isLoading && hasMore) {
+      fetchProducts();
+    }
   };
 
   return (
@@ -172,39 +134,66 @@ export default function Products() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
-          className="flex flex-wrap items-center justify-between gap-4 mb-8"
+          className="flex flex-col md:flex-row items-center justify-between gap-4 mb-8"
         >
-          {/* Categories */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
-            {categories.map((cat) => (
-              <Button
-                key={cat}
-                variant={selectedCategory === cat ? "default" : "outline"}
-                size="sm"
-                onClick={() => { setSelectedCategory(cat); setDisplayedProducts(allProducts.filter(p => cat === "All" || p.category === cat).slice(0, 8)); setHasMore(true); }}
-                className={`rounded-full whitespace-nowrap ${selectedCategory === cat ? "gradient-bg" : "glass"
-                  }`}
-              >
-                {cat}
-              </Button>
-            ))}
+          {/* Search Input */}
+          <div className="relative w-full md:w-96">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              id="search-products"
+              name="search"
+              placeholder="Search products..."
+              className="pl-10 rounded-full bg-background/50 border-input/50 focus:bg-background transition-all"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
-          {/* Sort & Filter */}
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className={`glass rounded-full gap-2 ${showFilters ? 'bg-primary/10 border-primary' : ''}`}
-              onClick={() => setShowFilters(!showFilters)}
-            >
-              <SlidersHorizontal className="h-4 w-4" />
-              <span className="hidden sm:inline">Filters</span>
-            </Button>
-            <Button variant="outline" size="sm" className="glass rounded-full gap-2">
-              <span>Sort by</span>
-              <ChevronDown className="h-4 w-4" />
-            </Button>
+          {/* Categories & Actions */}
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto justify-between md:justify-end">
+            {/* Categories (Quick Filter Chips) */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 no-scrollbar">
+              <Button
+                variant={selectedCategory === "All" ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setSelectedCategory("All");
+                  setFilterCategories([]); // Clear specific filters
+                }}
+                className={`rounded-full whitespace-nowrap ${selectedCategory === "All" ? "gradient-bg" : "glass"}`}
+              >
+                All
+              </Button>
+              {categories.slice(0, 5).map((cat) => (
+                <Button
+                  key={cat.id}
+                  variant={selectedCategory === cat.name ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSelectedCategory(cat.name);
+                    // Optionally update filterCategories to sync sidebar
+                    // setFilterCategories([String(cat.id)]);
+                  }}
+                  className={`rounded-full whitespace-nowrap ${selectedCategory === cat.name ? "gradient-bg" : "glass"
+                    }`}
+                >
+                  {cat.name}
+                </Button>
+              ))}
+            </div>
+
+            {/* Sort & Filter */}
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className={`glass rounded-full gap-2 ${showFilters ? 'bg-primary/10 border-primary' : ''}`}
+                onClick={() => setShowFilters(!showFilters)}
+              >
+                <SlidersHorizontal className="h-4 w-4" />
+                <span className="hidden sm:inline">Filters</span>
+              </Button>
+            </div>
           </div>
         </motion.div>
 
@@ -218,7 +207,17 @@ export default function Products() {
                 exit={{ opacity: 0, width: 0, x: -20 }}
                 className="hidden lg:block flex-shrink-0 overflow-hidden"
               >
-                <ProductFilters />
+                <ProductFilters
+                  minPrice={0}
+                  maxPrice={2000}
+                  priceRange={priceRange}
+                  setPriceRange={setPriceRange}
+                  categories={categories}
+                  selectedCategories={filterCategories}
+                  setSelectedCategories={setFilterCategories}
+                  rating={rating}
+                  setRating={setRating}
+                />
               </motion.div>
             )}
           </AnimatePresence>
@@ -231,19 +230,23 @@ export default function Products() {
               transition={{ delay: 0.2 }}
               className="text-sm text-muted-foreground mb-6"
             >
-              Showing {displayedProducts.length} of {filteredProducts.length} products
+              Showing {products.length} of {totalProducts} products
             </motion.p>
 
             {/* Products Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {displayedProducts.map((product, index) => (
+            <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+              {products.map((product, index) => (
                 <motion.div
                   key={product.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.05 }}
                 >
-                  <ProductCard {...product} />
+                  <ProductCard
+                    {...product}
+                    image={product.image_urls?.[0] || ""}
+                    price={Number(product.price)}
+                  />
                 </motion.div>
               ))}
             </div>
@@ -251,9 +254,16 @@ export default function Products() {
             {/* Infinite Scroll */}
             <InfiniteScroll
               onLoadMore={handleLoadMore}
-              hasMore={hasMore && displayedProducts.length < filteredProducts.length}
-              isLoading={isLoadingMore}
+              hasMore={hasMore}
+              isLoading={isLoading}
             />
+
+            {/* Empty State */}
+            {!isLoading && products.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-muted-foreground">No products found.</p>
+              </div>
+            )}
           </div>
         </div>
       </div>
