@@ -1,12 +1,11 @@
 import { motion } from "framer-motion";
 import { ProductCard } from "@/components/ProductCard";
-import { Filter, SlidersHorizontal, ChevronDown, Search as SearchIcon } from "lucide-react";
+import { Filter, SlidersHorizontal, ChevronDown, Search as SearchIcon, ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState, useEffect, useCallback } from "react";
-import { useDebounce } from "../hooks/use-debounce"; // Using relative path to be safer if alias fails
+import { useDebounce } from "../hooks/use-debounce";
 import api from "@/lib/axios";
-import { InfiniteScroll } from "@/components/InfiniteScroll";
 import { ProductFilters } from "@/components/ProductFilters";
 import { AnimatePresence } from "framer-motion";
 import { Product, Category } from "@/types";
@@ -18,10 +17,11 @@ export default function Products() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [products, setProducts] = useState<Product[]>([]);
-  const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const [isLoading, setIsLoading] = useState(false);
   const [totalProducts, setTotalProducts] = useState(0);
+  const productsPerPage = 12;
   const [searchQuery, setSearchQuery] = useState("");
 
   // Filters State
@@ -39,11 +39,13 @@ export default function Products() {
     }).catch(err => console.error("Failed to fetch categories", err));
   }, []);
 
-  const fetchProducts = useCallback(async (reset = false) => {
+  const fetchProducts = useCallback(async (pageNum: number) => {
     setIsLoading(true);
     try {
-      const currentPage = reset ? 1 : page;
-      const params: Record<string, string | number> = { page: currentPage };
+      const params: Record<string, string | number> = {
+        page: pageNum,
+        per_page: productsPerPage
+      };
 
       // Search
       if (debouncedSearch) {
@@ -51,19 +53,11 @@ export default function Products() {
       }
 
       // Categories
-      // Check if "All" is selected in chips -> ignore.
-      // If chips has a specific category, use it.
-      // If Sidebar has categories, use them.
-      // Priority: Sidebar (more specific) > Chips. Or sync them?
-      // Let's treat valid Chip selection as one of the filterCategories.
-
       let catsToSend = [...filterCategories];
       if (selectedCategory !== "All") {
-        // Find ID of selectedCategory name? The chips are currently Names.
-        // We need to map Name -> ID.
         const catObj = categories.find(c => c.name === selectedCategory);
         if (catObj && !catsToSend.includes(String(catObj.id))) {
-          catsToSend = [String(catObj.id)]; // Quick filter overrides/sets single
+          catsToSend = [String(catObj.id)];
         }
       }
 
@@ -85,33 +79,70 @@ export default function Products() {
       const newProducts = res.data.data.data;
       const meta = res.data.data.meta;
 
-      if (reset) {
-        setProducts(newProducts);
-        setPage(2);
-      } else {
-        setProducts(prev => [...prev, ...newProducts]);
-        setPage(prev => prev + 1);
-      }
-
-      setHasMore(currentPage < meta.last_page);
+      setProducts(newProducts);
+      setCurrentPage(meta.current_page);
+      setTotalPages(meta.last_page);
       setTotalProducts(meta.total);
+
+      // Scroll to top when page changes
+      window.scrollTo({ top: 0, behavior: 'smooth' });
 
     } catch (error) {
       console.error("Failed to fetch products", error);
     } finally {
       setIsLoading(false);
     }
-  }, [selectedCategory, debouncedSearch, page, filterCategories, debouncedPrice, rating, categories]);
+  }, [selectedCategory, debouncedSearch, filterCategories, debouncedPrice, rating, categories, productsPerPage]);
 
-  // Initial fetch and category change
+  // Initial fetch and reset to page 1 when filters change
   useEffect(() => {
-    fetchProducts(true);
-  }, [selectedCategory, debouncedSearch, filterCategories, debouncedPrice, rating, fetchProducts]); // Added dependencies
+    setCurrentPage(1);
+    fetchProducts(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory, debouncedSearch, filterCategories, debouncedPrice, rating]);
 
-  const handleLoadMore = () => {
-    if (!isLoading && hasMore) {
-      fetchProducts();
+  // Fetch when page changes (but not on initial mount or filter changes)
+  useEffect(() => {
+    if (currentPage !== 1) {
+      fetchProducts(currentPage);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 1 && newPage <= totalPages && !isLoading) {
+      setCurrentPage(newPage);
+    }
+  };
+
+  // Generate page numbers to display
+  const getPageNumbers = () => {
+    const pages: (number | string)[] = [];
+    const maxPagesToShow = 5;
+
+    if (totalPages <= maxPagesToShow) {
+      for (let i = 1; i <= totalPages; i++) {
+        pages.push(i);
+      }
+    } else {
+      if (currentPage <= 3) {
+        for (let i = 1; i <= 4; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      } else if (currentPage >= totalPages - 2) {
+        pages.push(1);
+        pages.push('...');
+        for (let i = totalPages - 3; i <= totalPages; i++) pages.push(i);
+      } else {
+        pages.push(1);
+        pages.push('...');
+        for (let i = currentPage - 1; i <= currentPage + 1; i++) pages.push(i);
+        pages.push('...');
+        pages.push(totalPages);
+      }
+    }
+
+    return pages;
   };
 
   return (
@@ -230,7 +261,7 @@ export default function Products() {
               transition={{ delay: 0.2 }}
               className="text-sm text-muted-foreground mb-6"
             >
-              Showing {products.length} of {totalProducts} products
+              Showing {(currentPage - 1) * productsPerPage + 1}-{Math.min(currentPage * productsPerPage, totalProducts)} of {totalProducts} products
             </motion.p>
 
             {/* Products Grid */}
@@ -251,12 +282,67 @@ export default function Products() {
               ))}
             </div>
 
-            {/* Infinite Scroll */}
-            <InfiniteScroll
-              onLoadMore={handleLoadMore}
-              hasMore={hasMore}
-              isLoading={isLoading}
-            />
+            {/* Pagination Controls */}
+            {!isLoading && products.length > 0 && totalPages > 1 && (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex items-center justify-center gap-2 mt-8"
+              >
+                {/* Previous Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1 || isLoading}
+                  className="gap-2"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                  Previous
+                </Button>
+
+                {/* Page Numbers */}
+                <div className="flex items-center gap-1">
+                  {getPageNumbers().map((pageNum, index) => (
+                    pageNum === '...' ? (
+                      <span key={`ellipsis-${index}`} className="px-2 text-muted-foreground">
+                        ...
+                      </span>
+                    ) : (
+                      <Button
+                        key={pageNum}
+                        variant={currentPage === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => handlePageChange(pageNum as number)}
+                        disabled={isLoading}
+                        className={`min-w-[40px] ${currentPage === pageNum ? 'gradient-bg' : ''}`}
+                      >
+                        {pageNum}
+                      </Button>
+                    )
+                  ))}
+                </div>
+
+                {/* Next Button */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === totalPages || isLoading}
+                  className="gap-2"
+                >
+                  Next
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </motion.div>
+            )}
+
+            {/* Loading State */}
+            {isLoading && (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+              </div>
+            )}
 
             {/* Empty State */}
             {!isLoading && products.length === 0 && (

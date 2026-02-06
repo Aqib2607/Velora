@@ -54,14 +54,8 @@ class DatabaseSeeder extends Seeder
             $shops->push($shop);
         }
 
-        // 6. 100 Products (Distributed among shops)
-        // 20 shops * 5 products = 100 products
-        foreach ($shops as $shop) {
-            Product::factory(5)->create([
-                'shop_id' => $shop->id,
-                'category_id' => $categories->random()->id,
-            ]);
-        }
+        // 6. Products (Using ProductSeeder for curated products with Unsplash images)
+        $this->call(ProductSeeder::class);
 
         $allProducts = Product::all();
 

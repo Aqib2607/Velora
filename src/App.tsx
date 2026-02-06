@@ -40,6 +40,7 @@ const Deals = React.lazy(() => import("./pages/Deals"));
 const About = React.lazy(() => import("./pages/About"));
 const Contact = React.lazy(() => import("./pages/Contact"));
 const ShippingPolicy = React.lazy(() => import("./pages/ShippingPolicy"));
+const Returns = React.lazy(() => import("./pages/Returns"));
 const UserDashboard = React.lazy(() => import("./pages/UserDashboard"));
 const Settings = React.lazy(() => import("./pages/Settings"));
 const VerifyEmail = React.lazy(() => import("./pages/VerifyEmail"));
@@ -129,6 +130,7 @@ const App = () => (
                     <Route path="/about" element={<About />} />
                     <Route path="/contact" element={<Contact />} />
                     <Route path="/shipping-policy" element={<ShippingPolicy />} />
+                    <Route path="/returns" element={<Returns />} />
 
                     {/* Protected Routes */}
                     <Route element={<RequireAuth />}>
