@@ -21,7 +21,7 @@
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:site" content="@Velora" />
   <meta name="twitter:image" content="/velora_thumbnail.png" />
-  <script type="module" crossorigin src="/assets/index-wzl4JquH.js"></script>
+  <script type="module" crossorigin src="/assets/index-BMZqloEe.js"></script>
   <link rel="stylesheet" crossorigin href="/assets/index-CjIBtNxY.css">
 </head>
 

@@ -90,6 +90,9 @@ const Index = () => {
               </p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
                 <input
+                  id="newsletter-email"
+                  name="email"
+                  autoComplete="email"
                   type="email"
                   placeholder="Enter your email"
                   className="w-full sm:flex-1 h-12 px-6 rounded-full bg-primary-foreground/20 border border-primary-foreground/30 text-primary-foreground placeholder:text-primary-foreground/60 focus:outline-none focus:ring-2 focus:ring-primary-foreground/50"

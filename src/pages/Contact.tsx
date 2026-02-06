@@ -38,11 +38,11 @@ const Contact = () => {
               <h2 className="text-2xl font-bold mb-6">Send us a message</h2>
               <form className="space-y-4">
                 <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2"><Label>Name</Label><Input placeholder="John Doe" /></div>
-                  <div className="space-y-2"><Label>Email</Label><Input type="email" placeholder="john@example.com" /></div>
+                  <div className="space-y-2"><Label htmlFor="contact-name">Name</Label><Input id="contact-name" name="name" autoComplete="name" placeholder="John Doe" /></div>
+                  <div className="space-y-2"><Label htmlFor="contact-email">Email</Label><Input id="contact-email" name="email" autoComplete="email" type="email" placeholder="john@example.com" /></div>
                 </div>
-                <div className="space-y-2"><Label>Subject</Label><Input placeholder="How can we help?" /></div>
-                <div className="space-y-2"><Label>Message</Label><Textarea rows={5} placeholder="Your message..." /></div>
+                <div className="space-y-2"><Label htmlFor="contact-subject">Subject</Label><Input id="contact-subject" name="subject" autoComplete="off" placeholder="How can we help?" /></div>
+                <div className="space-y-2"><Label htmlFor="contact-message">Message</Label><Textarea id="contact-message" name="message" autoComplete="off" rows={5} placeholder="Your message..." /></div>
                 <Button className="gap-2"><Send className="h-4 w-4" />Send Message</Button>
               </form>
             </CardContent>
