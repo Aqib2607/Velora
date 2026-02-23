@@ -1,12 +1,9 @@
 import { BarChart3, Package, DollarSign, AlertTriangle, TrendingUp } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useRegionStore } from "@/store/useRegionStore";
+import { convertAndFormat } from "@/utils/currency";
 
-const stats = [
-  { label: "Revenue", value: "$12,430", change: "+12%", icon: DollarSign, color: "text-green-600" },
-  { label: "Orders", value: "156", change: "+8%", icon: Package, color: "text-primary" },
-  { label: "Refund Rate", value: "2.1%", change: "-0.3%", icon: AlertTriangle, color: "text-accent" },
-  { label: "Active Products", value: "48", change: "+3", icon: BarChart3, color: "text-secondary" },
-];
+
 
 const recentOrders = [
   { id: "SO-101", buyer: "John D.", total: "$89.99", status: "Processing" },
@@ -17,6 +14,15 @@ const recentOrders = [
 ];
 
 const SellerDashboard = () => {
+  const { currency, locale } = useRegionStore();
+
+  const stats = [
+    { label: "Revenue", value: convertAndFormat(12430, currency, locale), change: "+12%", icon: DollarSign, color: "text-green-600" },
+    { label: "Orders", value: "156", change: "+8%", icon: Package, color: "text-primary" },
+    { label: "Refund Rate", value: "2.1%", change: "-0.3%", icon: AlertTriangle, color: "text-accent" },
+    { label: "Active Products", value: "48", change: "+3", icon: BarChart3, color: "text-secondary" },
+  ];
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex items-center justify-between">

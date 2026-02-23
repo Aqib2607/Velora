@@ -1,14 +1,22 @@
 <?php
 
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\AppConfigController;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\CartController;
 use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\CurrencyController;
+use App\Http\Controllers\DealController;
+use App\Http\Controllers\GiftCardController;
 use App\Http\Controllers\LedgerController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PayoutController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\RegionController;
+use App\Http\Controllers\RegistryController;
 use App\Http\Controllers\RefundController;
+use App\Http\Controllers\SellerApplicationController;
+use App\Http\Controllers\SupportTicketController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
@@ -33,6 +41,12 @@ Route::prefix('v1')->middleware(['resolve.tenant', 'throttle:api'])->group(funct
         Route::post('register', [AuthController::class, 'register']);
         Route::post('login',    [AuthController::class, 'login']);
     });
+
+    // Configuration & Metadata (Public)
+    Route::get('config/app', [AppConfigController::class, 'index']);
+    Route::get('regions',    [RegionController::class, 'index']);
+    Route::get('currencies', [CurrencyController::class, 'index']);
+    Route::get('deals',      [DealController::class, 'index']);
 
     // Stripe webhook — public but signature-validated
     Route::post('webhooks/stripe', [WebhookController::class, 'stripe'])
@@ -104,6 +118,35 @@ Route::prefix('v1')->middleware([
         Route::get('accounts',                          [LedgerController::class, 'accounts']);
         Route::get('transactions',                      [LedgerController::class, 'transactions']);
         Route::get('transactions/{transaction}',        [LedgerController::class, 'show']);
+    });
+
+    // ── Gift Cards
+    Route::prefix('gift-cards')->group(function () {
+        Route::get('/',          [GiftCardController::class, 'index']);
+        Route::post('purchase',  [GiftCardController::class, 'purchase']);
+        Route::post('redeem',    [GiftCardController::class, 'redeem']);
+    });
+
+    // ── Registry
+    Route::prefix('registry')->group(function () {
+        Route::get('/',              [RegistryController::class, 'index']);
+        Route::post('/',             [RegistryController::class, 'store']);
+        Route::get('/{registry}',    [RegistryController::class, 'show']);
+        Route::post('/{registry}/items', [RegistryController::class, 'addItem']);
+    });
+
+    // ── Support
+    Route::prefix('support')->group(function () {
+        Route::get('tickets',           [SupportTicketController::class, 'index']);
+        // Ticket submission is audited and idempotent
+        Route::post('tickets',          [SupportTicketController::class, 'store']);
+        Route::get('tickets/{ticket}',  [SupportTicketController::class, 'show']);
+    });
+
+    // ── Seller Onboarding
+    Route::prefix('seller')->group(function () {
+        Route::post('apply', [SellerApplicationController::class, 'store']);
+        Route::get('status', [SellerApplicationController::class, 'status']);
     });
 
     // ── Admin

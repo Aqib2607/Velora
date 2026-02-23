@@ -1,10 +1,13 @@
 import { Link } from "react-router-dom";
 import { Star } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
+import { useRegionStore } from "@/store/useRegionStore";
+import { convertAndFormat } from "@/utils/currency";
 import type { Product } from "@/data/mock";
 
 const ProductCard = ({ product }: { product: Product }) => {
   const addItem = useCartStore((s) => s.addItem);
+  const { currency, locale } = useRegionStore();
 
   return (
     <div className="group rounded-xl border border-border bg-card overflow-hidden hover-lift shadow-sm hover:shadow-md transition-shadow">
@@ -31,10 +34,10 @@ const ProductCard = ({ product }: { product: Product }) => {
           </span>
         </div>
         <div className="flex items-baseline gap-2 mt-2">
-          <span className="text-lg font-bold">${product.price.toFixed(2)}</span>
+          <span className="text-lg font-bold">{convertAndFormat(product.price, currency, locale)}</span>
           {product.originalPrice && (
             <span className="text-sm text-muted-foreground line-through">
-              ${product.originalPrice.toFixed(2)}
+              {convertAndFormat(product.originalPrice, currency, locale)}
             </span>
           )}
         </div>

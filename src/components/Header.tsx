@@ -3,6 +3,7 @@ import { Search, ShoppingCart, User, Sun, Moon, Menu, X } from "lucide-react";
 import { useCartStore } from "@/store/cartStore";
 import { useThemeStore } from "@/store/themeStore";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 
 const Header = () => {
   const totalItems = useCartStore((s) => s.totalItems());
@@ -10,6 +11,7 @@ const Header = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,7 +38,7 @@ const Header = () => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search products, brands, categories..."
+                placeholder={t('nav.search') + " products..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -55,7 +57,7 @@ const Header = () => {
             </button>
 
             <Link to="/seller/dashboard" className="hidden sm:flex items-center gap-1 px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors">
-              Sell
+              {t('nav.seller_central')}
             </Link>
 
             <Link to="/login" className="p-2 rounded-lg hover:bg-muted transition-colors">
@@ -88,7 +90,7 @@ const Header = () => {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <input
                   type="text"
-                  placeholder="Search products..."
+                  placeholder={t('nav.search') + "..."}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background px-10 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
@@ -96,8 +98,8 @@ const Header = () => {
               </div>
             </form>
             <div className="mt-3 flex flex-col gap-1">
-              <Link to="/seller/dashboard" className="px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors">Seller Central</Link>
-              <Link to="/admin/dashboard" className="px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors">Admin</Link>
+              <Link to="/seller/dashboard" className="px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors">{t('nav.seller_central')}</Link>
+              <Link to="/admin/dashboard" className="px-3 py-2 text-sm rounded-lg hover:bg-muted transition-colors">{t('nav.admin')}</Link>
             </div>
           </div>
         )}

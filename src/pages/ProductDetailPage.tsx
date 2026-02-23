@@ -3,12 +3,15 @@ import { Star, ShoppingCart, ChevronRight, Minus, Plus } from "lucide-react";
 import { useState } from "react";
 import { products } from "@/data/mock";
 import { useCartStore } from "@/store/cartStore";
+import { useRegionStore } from "@/store/useRegionStore";
+import { convertAndFormat } from "@/utils/currency";
 import ProductCard from "@/components/ProductCard";
 
 const ProductDetailPage = () => {
   const { id } = useParams();
   const product = products.find((p) => p.id === id);
   const addItem = useCartStore((s) => s.addItem);
+  const { currency, locale } = useRegionStore();
   const [qty, setQty] = useState(1);
   const [activeTab, setActiveTab] = useState<"description" | "reviews">("description");
 
@@ -56,10 +59,10 @@ const ProductDetailPage = () => {
           <p className="text-sm text-muted-foreground mt-2">Sold by <span className="text-primary font-medium">{product.seller}</span></p>
 
           <div className="flex items-baseline gap-3 mt-6">
-            <span className="text-3xl font-bold">${product.price.toFixed(2)}</span>
+            <span className="text-3xl font-bold">{convertAndFormat(product.price, currency, locale)}</span>
             {product.originalPrice && (
               <>
-                <span className="text-lg text-muted-foreground line-through">${product.originalPrice.toFixed(2)}</span>
+                <span className="text-lg text-muted-foreground line-through">{convertAndFormat(product.originalPrice, currency, locale)}</span>
                 <span className="text-sm font-medium text-green-600 dark:text-green-400">
                   {Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)}% off
                 </span>
